@@ -1,0 +1,54 @@
+# ==============================================================================
+# SYSTEM OPERACYJNY & EDYTOR KODU (IDE)
+# ==============================================================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ==============================================================================
+# BEZPIECZEŃSTWO & ŚRODOWISKO (SECRETS & ENVIRONMENT)
+# ==============================================================================
+.env
+.env*.local
+*.pem
+*.key
+*.p12
+
+# ==============================================================================
+# BACKEND (JAVA 21 & SPRING BOOT / GRADLE / MAVEN)
+# ==============================================================================
+backend/.gradle/
+backend/build/
+backend/out/
+backend/target/
+backend/bin/
+backend/.settings/
+backend/.project
+backend/.classpath
+
+# ==============================================================================
+# FRONTEND (NODE.JS, NEXT.JS & TYPESCRIPT)
+# ==============================================================================
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.turbo/
+frontend/*.tsbuildinfo
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# ==============================================================================
+# DOCKER & BAZA DANYCH
+# ==============================================================================
+postgres_data/
+docker_data/
+*.log
