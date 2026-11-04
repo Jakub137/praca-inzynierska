@@ -38,5 +38,10 @@ Projekt łączy standardy architektoniczne nowoczesnego oprogramowania klasy Ent
 ### Uruchomienie środowiska bazodanowego (PostgreSQL 16)
 
 ```bash
+cp .env.example .env
 docker compose up -d
+docker compose ps
 ```
+
+Plik `.env` zawiera lokalne dane logowania do bazy i nie jest śledzony przez Git.
+Baza nasłuchuje na `127.0.0.1:5432` (baza `saldo`, użytkownik `saldo`), a dane są przechowywane w wolumenie Dockera `saldo_postgres_data`.
