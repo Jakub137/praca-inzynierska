@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: saldo-backend
+  autoconfigure:
+    # TEMPORARY (T-003): the app must start without a database.
+    # T-004 removes this whole "autoconfigure" key and adds spring.datasource.*.
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
