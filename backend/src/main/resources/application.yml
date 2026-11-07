@@ -1,10 +1,16 @@
 spring:
   application:
     name: saldo-backend
-  autoconfigure:
-    # TEMPORARY (T-003): the app must start without a database.
-    # T-004 removes this whole "autoconfigure" key and adds spring.datasource.*.
-    exclude:
-      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
-      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
-      - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
+  config:
+    import: "optional:file:../.env[.properties]"
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:saldo}
+    username: ${POSTGRES_USER:saldo}
+    password: ${POSTGRES_PASSWORD:}
+    hikari:
+      pool-name: saldo-pool
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate

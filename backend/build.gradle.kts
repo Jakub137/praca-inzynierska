@@ -30,13 +30,15 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-flyway-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation("org.testcontainers:testcontainers-postgresql")
 	testCompileOnly("org.projectlombok:lombok")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	testAnnotationProcessor("org.projectlombok:lombok")
 }
 
 tasks.withType<JavaCompile> {
-    options.compilerArgs.add("-parameters")
+	options.compilerArgs.add("-parameters")
 }
 
 tasks.withType<Test> {
