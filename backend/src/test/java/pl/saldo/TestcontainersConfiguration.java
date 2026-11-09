@@ -15,6 +15,7 @@ class TestcontainersConfiguration {
 
 	@Bean
 	@ServiceConnection
+	@SuppressWarnings("resource")
 	PostgreSQLContainer postgresContainer() {
 		return new PostgreSQLContainer(DockerImageName.parse(POSTGRES_IMAGE))
 				.withEnv("POSTGRES_INITDB_ARGS", INITDB_ARGS);
