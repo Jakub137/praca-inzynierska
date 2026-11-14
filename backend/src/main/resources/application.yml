@@ -14,3 +14,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  web:
+    error:
+      include-message: never
+      include-stacktrace: never
