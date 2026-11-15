@@ -3,6 +3,8 @@ package pl.saldo.auth.api;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,10 +17,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import pl.saldo.auth.usecase.GetCurrentUserUseCase;
 import pl.saldo.auth.usecase.LoginUserCommand;
 import pl.saldo.auth.usecase.LoginUserUseCase;
 import pl.saldo.auth.usecase.RegisterUserCommand;
 import pl.saldo.auth.usecase.RegisterUserUseCase;
+import pl.saldo.shared.security.UserPrincipal;
 import pl.saldo.user.api.UserResponse;
 
 @RestController
@@ -28,10 +32,13 @@ public class AuthController {
 
 	private final RegisterUserUseCase registerUserUseCase;
 	private final LoginUserUseCase loginUserUseCase;
+	private final GetCurrentUserUseCase getCurrentUserUseCase;
 
-	public AuthController(RegisterUserUseCase registerUserUseCase, LoginUserUseCase loginUserUseCase) {
+	public AuthController(RegisterUserUseCase registerUserUseCase, LoginUserUseCase loginUserUseCase,
+			GetCurrentUserUseCase getCurrentUserUseCase) {
 		this.registerUserUseCase = registerUserUseCase;
 		this.loginUserUseCase = loginUserUseCase;
+		this.getCurrentUserUseCase = getCurrentUserUseCase;
 	}
 
 	@PostMapping("/register")
@@ -87,6 +94,27 @@ public class AuthController {
 	})
 	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginUserCommand command) {
 		return ResponseEntity.ok(AuthResponse.fromResult(loginUserUseCase.execute(command)));
+	}
+
+	@GetMapping("/me")
+	@Operation(
+			summary = "Profil zalogowanego użytkownika",
+			description = "Zwraca dane użytkownika powiązanego z tokenem JWT (nagłówek Authorization: Bearer). "
+					+ "Służy do odtworzenia sesji po odświeżeniu strony. Odpowiedź nie zawiera hasła ani jego skrótu.")
+	@ApiResponses({
+			@ApiResponse(
+					responseCode = "200",
+					description = "Profil zalogowanego użytkownika",
+					content = @Content(schema = @Schema(implementation = UserResponse.class))),
+			@ApiResponse(
+					responseCode = "401",
+					description = "Brak tokena, token nieprawidłowy lub wygasły albo konto już nie istnieje",
+					content = @Content(
+							mediaType = "application/problem+json",
+							schema = @Schema(implementation = ProblemDetail.class)))
+	})
+	public ResponseEntity<UserResponse> currentUser(@AuthenticationPrincipal UserPrincipal principal) {
+		return ResponseEntity.ok(getCurrentUserUseCase.execute(principal.id()));
 	}
 
 }

@@ -29,7 +29,8 @@ import pl.saldo.user.infrastructure.UserRepository;
 public class SecurityConfiguration {
 
 	private static final String[] PUBLIC_ENDPOINTS = {
-			"/api/v1/auth/**",
+			"/api/v1/auth/register",
+			"/api/v1/auth/login",
 			"/api/v1/health",
 			"/swagger-ui.html",
 			"/swagger-ui/**",
