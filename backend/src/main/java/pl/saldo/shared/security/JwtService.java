@@ -51,6 +51,10 @@ public class JwtService {
 				.compact();
 	}
 
+	public long expiresInSeconds() {
+		return expiration.toSeconds();
+	}
+
 	public UUID extractUserId(String token) {
 		return UUID.fromString(parseClaims(token).get(CLAIM_USER_ID, String.class));
 	}
