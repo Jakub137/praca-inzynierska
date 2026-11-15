@@ -18,6 +18,9 @@ public final class ErrorMessages {
 	public static final Text UNAUTHORIZED = new Text(
 			"Brak autoryzacji",
 			"Wymagane jest zalogowanie. Zaloguj się ponownie.");
+	public static final Text INVALID_CREDENTIALS = new Text(
+			"Nieudane logowanie",
+			"Nieprawidłowy adres e-mail lub hasło.");
 	public static final Text FORBIDDEN = new Text(
 			"Brak dostępu",
 			"Nie masz uprawnień do wykonania tej operacji.");

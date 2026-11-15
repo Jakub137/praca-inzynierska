@@ -18,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
+import pl.saldo.auth.usecase.LoginUserUseCase;
 import pl.saldo.auth.usecase.RegisterUserCommand;
 import pl.saldo.auth.usecase.RegisterUserUseCase;
 import pl.saldo.currency.domain.SupportedCurrency;
@@ -42,6 +43,9 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private RegisterUserUseCase registerUserUseCase;
+
+	@MockitoBean
+	private LoginUserUseCase loginUserUseCase;
 
 	@MockitoBean
 	private JwtService jwtService;
