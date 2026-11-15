@@ -12,11 +12,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.context.annotation.Import;
 import pl.saldo.shared.config.ClockConfiguration;
+import pl.saldo.shared.security.JwtService;
+import pl.saldo.shared.security.SecurityConfiguration;
+import pl.saldo.user.infrastructure.UserRepository;
 
 import pl.saldo.health.usecase.GetHealthUseCase;
 
 @WebMvcTest(HealthController.class)
-@Import(ClockConfiguration.class)
+@Import({ ClockConfiguration.class, SecurityConfiguration.class })
 class HealthControllerTest {
 
 	private static final Instant FIXED_TIME = Instant.parse("2026-01-01T12:00:00Z");
@@ -26,6 +29,13 @@ class HealthControllerTest {
 
 	@MockitoBean
 	private GetHealthUseCase getHealthUseCase;
+
+	@MockitoBean
+	private JwtService jwtService;
+
+	@MockitoBean
+	private UserRepository userRepository;
+
 
 	@Test
 	void shouldReturnStatusUpAndUtcTimestamp() {

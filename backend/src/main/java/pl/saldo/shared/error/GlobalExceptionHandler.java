@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -65,6 +67,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(UserAlreadyExistsException.class)
 	public ProblemDetail handleUserAlreadyExists() {
 		return problem(HttpStatus.CONFLICT, ErrorMessages.EMAIL_TAKEN);
+	}
+
+	@ExceptionHandler(AuthenticationException.class)
+	public ProblemDetail handleAuthentication() {
+		return problem(HttpStatus.UNAUTHORIZED, ErrorMessages.UNAUTHORIZED);
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ProblemDetail handleAccessDenied() {
+		return problem(HttpStatus.FORBIDDEN, ErrorMessages.FORBIDDEN);
 	}
 
 	// Logs the exception and the request line only: never the request body, query string or headers.
