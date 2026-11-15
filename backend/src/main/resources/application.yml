@@ -23,4 +23,4 @@ app:
     secret: ${JWT_SECRET:}
     expiration: 24h
   cors:
-    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}      
+    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}

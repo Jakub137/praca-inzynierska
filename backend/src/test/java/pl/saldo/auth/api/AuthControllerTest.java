@@ -43,7 +43,7 @@ class AuthControllerTest {
 	@MockitoBean
 	private RegisterUserUseCase registerUserUseCase;
 
-		@MockitoBean
+	@MockitoBean
 	private JwtService jwtService;
 
 	@MockitoBean

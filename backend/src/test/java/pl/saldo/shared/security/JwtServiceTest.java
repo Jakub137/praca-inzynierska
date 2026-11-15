@@ -67,6 +67,11 @@ class JwtServiceTest {
 	}
 
 	@Test
+	void exposesExpirationInSeconds() {
+		assertThat(jwtService.expiresInSeconds()).isEqualTo(EXPIRATION.toSeconds());
+	}
+
+	@Test
 	void acceptsTokenForMatchingUser() {
 		String token = jwtService.generateToken(user);
 
