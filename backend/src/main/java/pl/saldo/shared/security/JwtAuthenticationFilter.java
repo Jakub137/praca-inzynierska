@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		Optional<UserPrincipal> principal = authenticate(token.get());
 		if (principal.isEmpty()) {
 			SecurityContextHolder.clearContext();
-			authenticationEntryPoint.commence(request, response, new BadCredentialsException("Invalid JWT"));
+			authenticationEntryPoint.commence(request, response, new InsufficientAuthenticationException("Invalid JWT"));
 			return;
 		}
 		SecurityContextHolder.setContext(contextFor(principal.get()));
