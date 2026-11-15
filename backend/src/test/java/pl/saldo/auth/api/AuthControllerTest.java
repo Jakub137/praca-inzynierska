@@ -22,12 +22,15 @@ import pl.saldo.auth.usecase.RegisterUserCommand;
 import pl.saldo.auth.usecase.RegisterUserUseCase;
 import pl.saldo.currency.domain.SupportedCurrency;
 import pl.saldo.shared.config.ClockConfiguration;
+import pl.saldo.shared.security.JwtService;
 import pl.saldo.shared.security.PasswordPolicy;
+import pl.saldo.shared.security.SecurityConfiguration;
 import pl.saldo.user.api.UserResponse;
 import pl.saldo.user.domain.UserAlreadyExistsException;
+import pl.saldo.user.infrastructure.UserRepository;
 
 @WebMvcTest(AuthController.class)
-@Import(ClockConfiguration.class)
+@Import({ ClockConfiguration.class, SecurityConfiguration.class })
 class AuthControllerTest {
 
 	private static final String REGISTER_URI = "/api/v1/auth/register";
@@ -39,6 +42,12 @@ class AuthControllerTest {
 
 	@MockitoBean
 	private RegisterUserUseCase registerUserUseCase;
+
+		@MockitoBean
+	private JwtService jwtService;
+
+	@MockitoBean
+	private UserRepository userRepository;
 
 	@Test
 	void shouldReturn201WithUserWithoutPasswordOrHash() {

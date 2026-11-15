@@ -15,6 +15,12 @@ public final class ErrorMessages {
 	public static final Text INTERNAL = new Text(
 			"Błąd serwera",
 			"Wystąpił nieoczekiwany błąd. Spróbuj ponownie później.");
+	public static final Text UNAUTHORIZED = new Text(
+			"Brak autoryzacji",
+			"Wymagane jest zalogowanie. Zaloguj się ponownie.");
+	public static final Text FORBIDDEN = new Text(
+			"Brak dostępu",
+			"Nie masz uprawnień do wykonania tej operacji.");
 
 	private static final Text BAD_REQUEST = new Text(
 			"Nieprawidłowe żądanie",
@@ -41,6 +47,8 @@ public final class ErrorMessages {
 	public static Text forStatus(int status) {
 		return switch (status) {
 			case 400 -> BAD_REQUEST;
+			case 401 -> UNAUTHORIZED;
+			case 403 -> FORBIDDEN;
 			case 404 -> NOT_FOUND;
 			case 405 -> METHOD_NOT_ALLOWED;
 			case 406 -> NOT_ACCEPTABLE;
