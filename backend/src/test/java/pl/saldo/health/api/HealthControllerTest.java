@@ -15,7 +15,6 @@ import pl.saldo.shared.config.ClockConfiguration;
 import pl.saldo.shared.security.JwtService;
 import pl.saldo.shared.security.SecurityConfiguration;
 import pl.saldo.user.infrastructure.UserRepository;
-
 import pl.saldo.health.usecase.GetHealthUseCase;
 
 @WebMvcTest(HealthController.class)
