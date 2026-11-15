@@ -45,6 +45,8 @@ class SecurityIntegrationTest {
 	private static final String FORBIDDEN_URI = "/api/v1/security-probe/forbidden";
 	private static final String HEALTH_URI = "/api/v1/health";
 	private static final String LOGIN_URI = "/api/v1/auth/login";
+	private static final String ME_URI = "/api/v1/auth/me";
+	private static final String UNLISTED_AUTH_URI = "/api/v1/auth/unlisted";
 	private static final String EMAIL = "jan.kowalski@example.com";
 	private static final String PASSWORD = "Secret#123";
 	private static final Duration PAST_OFFSET = Duration.ofDays(-2);
@@ -177,6 +179,43 @@ class SecurityIntegrationTest {
 		assertThat(result).bodyJson().extractingPath("$.detail")
 				.isEqualTo("Nie masz uprawnień do wykonania tej operacji.");
 		assertThat(result).bodyJson().hasPath("$.timestamp");
+	}
+
+	@Test
+	void shouldReturn401ForMeWithoutToken() {
+		assertUnauthorized(mvc.get().uri(ME_URI).exchange());
+	}
+
+	@Test
+	void shouldReturnProfileOfTokenOwnerFromMe() {
+		UserEntity user = saveUser();
+
+		MvcTestResult result = getWithToken(ME_URI, jwtService.generateToken(user));
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(user.getId().toString());
+		assertThat(result).bodyJson().extractingPath("$.email").isEqualTo(EMAIL);
+		assertThat(result).bodyJson().extractingPath("$.firstName").isEqualTo("Jan");
+		assertThat(result).bodyJson().extractingPath("$.lastName").isEqualTo("Kowalski");
+		assertThat(result).bodyJson().extractingPath("$.defaultCurrency").isEqualTo("PLN");
+		assertThat(result).bodyJson().hasPath("$.createdAt");
+		assertThat(result).bodyJson().doesNotHavePath("$.passwordHash");
+		assertThat(result).bodyText().doesNotContain(PASSWORD);
+	}
+
+	@Test
+	void shouldReturn401ForMeWhenUserFromTokenNoLongerExists() {
+		UserEntity user = saveUser();
+		String token = jwtService.generateToken(user);
+		userRepository.delete(user);
+		userRepository.flush();
+
+		assertUnauthorized(getWithToken(ME_URI, token));
+	}
+
+	@Test
+	void shouldProtectAuthPathsOtherThanRegisterAndLogin() {
+		assertUnauthorized(mvc.get().uri(UNLISTED_AUTH_URI).exchange());
 	}
 
 	private UserEntity saveUser() {
