@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import pl.saldo.auth.usecase.LoginUserCommand;
+import pl.saldo.auth.usecase.LoginUserUseCase;
 import pl.saldo.auth.usecase.RegisterUserCommand;
 import pl.saldo.auth.usecase.RegisterUserUseCase;
 import pl.saldo.user.api.UserResponse;
@@ -25,9 +27,11 @@ import pl.saldo.user.api.UserResponse;
 public class AuthController {
 
 	private final RegisterUserUseCase registerUserUseCase;
+	private final LoginUserUseCase loginUserUseCase;
 
-	public AuthController(RegisterUserUseCase registerUserUseCase) {
+	public AuthController(RegisterUserUseCase registerUserUseCase, LoginUserUseCase loginUserUseCase) {
 		this.registerUserUseCase = registerUserUseCase;
+		this.loginUserUseCase = loginUserUseCase;
 	}
 
 	@PostMapping("/register")
@@ -55,6 +59,34 @@ public class AuthController {
 	})
 	public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterUserCommand command) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(registerUserUseCase.execute(command));
+	}
+
+	@PostMapping("/login")
+	@Operation(
+			summary = "Logowanie użytkownika",
+			description = "Weryfikuje e-mail i hasło. Zwraca token JWT (Bearer), czas jego ważności w sekundach "
+					+ "oraz podstawowe dane użytkownika. Błędny e-mail i błędne hasło dają identyczną odpowiedź.")
+	@ApiResponses({
+			@ApiResponse(
+					responseCode = "200",
+					description = "Zalogowano pomyślnie",
+					content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+			@ApiResponse(
+					responseCode = "400",
+					description = "Brak e-maila lub hasła albo przekroczone limity długości. "
+							+ "Lista błędów pól w polu fieldErrors.",
+					content = @Content(
+							mediaType = "application/problem+json",
+							schema = @Schema(implementation = ProblemDetail.class))),
+			@ApiResponse(
+					responseCode = "401",
+					description = "Nieprawidłowy adres e-mail lub hasło",
+					content = @Content(
+							mediaType = "application/problem+json",
+							schema = @Schema(implementation = ProblemDetail.class)))
+	})
+	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginUserCommand command) {
+		return ResponseEntity.ok(AuthResponse.fromResult(loginUserUseCase.execute(command)));
 	}
 
 }

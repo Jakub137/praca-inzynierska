@@ -16,7 +16,7 @@ import pl.saldo.user.infrastructure.UserRepository;
 @Service
 public class LoginUserUseCase {
 
-	// Internal message only: the client sees the Polish text added in T-020. Identical for every failure reason.
+	// Internal message only: the client sees the Polish text from GlobalExceptionHandler. Identical for every failure reason.
 	private static final String INVALID_CREDENTIALS = "Invalid credentials";
 
 	private final UserRepository userRepository;

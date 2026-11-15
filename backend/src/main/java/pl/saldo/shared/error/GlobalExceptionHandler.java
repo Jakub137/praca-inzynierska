@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -67,6 +68,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(UserAlreadyExistsException.class)
 	public ProblemDetail handleUserAlreadyExists() {
 		return problem(HttpStatus.CONFLICT, ErrorMessages.EMAIL_TAKEN);
+	}
+
+	@ExceptionHandler(BadCredentialsException.class)
+	public ProblemDetail handleBadCredentials() {
+		return problem(HttpStatus.UNAUTHORIZED, ErrorMessages.INVALID_CREDENTIALS);
 	}
 
 	@ExceptionHandler(AuthenticationException.class)
