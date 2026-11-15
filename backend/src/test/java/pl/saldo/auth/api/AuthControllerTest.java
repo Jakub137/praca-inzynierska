@@ -14,10 +14,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
+import pl.saldo.auth.usecase.LoginResult;
+import pl.saldo.auth.usecase.LoginUserCommand;
 import pl.saldo.auth.usecase.LoginUserUseCase;
 import pl.saldo.auth.usecase.RegisterUserCommand;
 import pl.saldo.auth.usecase.RegisterUserUseCase;
@@ -35,6 +38,7 @@ import pl.saldo.user.infrastructure.UserRepository;
 class AuthControllerTest {
 
 	private static final String REGISTER_URI = "/api/v1/auth/register";
+	private static final String LOGIN_URI = "/api/v1/auth/login";
 	private static final String EMAIL = "jan.kowalski@example.com";
 	private static final String PASSWORD = "Secret#123";
 
@@ -169,11 +173,75 @@ class AuthControllerTest {
 		then(registerUserUseCase).shouldHaveNoInteractions();
 	}
 
+	@Test
+	void shouldReturn200WithAuthResponseWithoutCreatedAtOrPassword() {
+		UserResponse user = userResponse();
+		given(loginUserUseCase.execute(any(LoginUserCommand.class)))
+				.willReturn(new LoginResult("jwt-value", 86400L, user));
+
+		MvcTestResult result = login(loginJson(EMAIL, PASSWORD));
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyJson().extractingPath("$.accessToken").isEqualTo("jwt-value");
+		assertThat(result).bodyJson().extractingPath("$.expiresIn").isEqualTo(86400);
+		assertThat(result).bodyJson().extractingPath("$.user.id").isEqualTo(user.id().toString());
+		assertThat(result).bodyJson().extractingPath("$.user.email").isEqualTo(EMAIL);
+		assertThat(result).bodyJson().extractingPath("$.user.firstName").isEqualTo("Jan");
+		assertThat(result).bodyJson().extractingPath("$.user.lastName").isEqualTo("Kowalski");
+		assertThat(result).bodyJson().extractingPath("$.user.defaultCurrency").isEqualTo("PLN");
+		assertThat(result).bodyJson().doesNotHavePath("$.user.createdAt");
+		assertThat(result).bodyJson().doesNotHavePath("$.user.passwordHash");
+		assertThat(result).bodyText().doesNotContain(PASSWORD);
+		then(loginUserUseCase).should().execute(new LoginUserCommand(EMAIL, PASSWORD));
+	}
+
+	@Test
+	void shouldReturn401WithPolishMessageForBadCredentials() {
+		given(loginUserUseCase.execute(any(LoginUserCommand.class)))
+				.willThrow(new BadCredentialsException("Invalid credentials"));
+
+		MvcTestResult result = login(loginJson(EMAIL, PASSWORD));
+
+		assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+		assertThat(result).bodyJson().extractingPath("$.title").isEqualTo("Nieudane logowanie");
+		assertThat(result).bodyJson().extractingPath("$.detail")
+				.isEqualTo("Nieprawidłowy adres e-mail lub hasło.");
+		assertThat(result).bodyJson().hasPath("$.timestamp");
+		assertThat(result).bodyText().doesNotContain(PASSWORD).doesNotContain("Invalid credentials");
+	}
+
+	@Test
+	void shouldReturn400WithFieldErrorsForBlankCredentialsWithoutCallingUseCase() {
+		MvcTestResult result = login(loginJson("", ""));
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors").asArray().hasSize(2);
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("email");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message")
+				.isEqualTo("Adres e-mail jest wymagany");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[1].field").isEqualTo("password");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[1].message").isEqualTo("Hasło jest wymagane");
+		then(loginUserUseCase).shouldHaveNoInteractions();
+	}
+
 	private MvcTestResult register(String body) {
 		return mvc.post().uri(REGISTER_URI)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(body)
 				.exchange();
+	}
+
+	private MvcTestResult login(String body) {
+		return mvc.post().uri(LOGIN_URI)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body)
+				.exchange();
+	}
+
+	private static String loginJson(String email, String password) {
+		return """
+				{"email":"%s","password":"%s"}
+				""".formatted(email, password);
 	}
 
 	private static String json(String firstName, String lastName, String email, String password) {
