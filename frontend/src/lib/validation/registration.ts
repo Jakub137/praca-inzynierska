@@ -4,7 +4,7 @@ export const NAME_MAX_LENGTH = 60;
 export const EMAIL_MAX_LENGTH = 150;
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 64;
-const PASSWORD_MAX_BYTES = 72;
+export const PASSWORD_MAX_BYTES = 72;
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
@@ -71,7 +71,7 @@ function validateName(
   return undefined;
 }
 
-function validateEmail(value: string): string | undefined {
+export function validateEmail(value: string): string | undefined {
   const trimmed = value.trim();
   if (trimmed.length === 0) {
     return "Adres e-mail jest wymagany";
