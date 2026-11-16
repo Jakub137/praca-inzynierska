@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import RegisterPage from "@/app/(auth)/register/page";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 const PASSWORD_HINT =
   "Min. 8 znaków, 1 wielka litera, 1 cyfra, 1 znak specjalny (np. !, @, #, $).";
@@ -28,9 +32,9 @@ describe("RegisterPage", () => {
 
     const hint = screen.getByText(PASSWORD_HINT);
 
-    expect(screen.getByLabelText("Hasło").getAttribute("aria-describedby")).toBe(
-      hint.id,
-    );
+    expect(
+      screen.getByLabelText("Hasło").getAttribute("aria-describedby"),
+    ).toBe(hint.id);
   });
 
   test("renders the three brand features", () => {
@@ -54,5 +58,22 @@ describe("RegisterPage", () => {
     expect(
       screen.getByRole("link", { name: "Zaloguj się" }).getAttribute("href"),
     ).toBe("/login");
+  });
+
+  test("renders the unchecked terms checkbox and disables native validation", () => {
+    render(<RegisterPage />);
+
+    const checkbox = screen.getByLabelText(
+      "Akceptuję Regulamin i Politykę prywatności",
+    );
+
+    expect(checkbox.getAttribute("type")).toBe("checkbox");
+    expect((checkbox as HTMLInputElement).checked).toBe(false);
+    expect(
+      screen
+        .getByRole("button", { name: "Zarejestruj się" })
+        .closest("form")
+        ?.hasAttribute("novalidate"),
+    ).toBe(true);
   });
 });
