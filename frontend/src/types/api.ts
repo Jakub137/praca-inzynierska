@@ -35,3 +35,22 @@ export type UserResponse = {
   readonly defaultCurrency: SupportedCurrency;
   readonly createdAt: string;
 };
+
+export type LoginRequest = {
+  readonly email: string;
+  readonly password: string;
+};
+
+export type AuthUserResponse = {
+  readonly id: string;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly defaultCurrency: SupportedCurrency;
+};
+
+export type AuthResponse = {
+  readonly accessToken: string;
+  readonly expiresIn: number;
+  readonly user: AuthUserResponse;
+};
