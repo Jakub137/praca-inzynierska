@@ -1,17 +1,21 @@
 import { render } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon";
 import { CheckIcon } from "@/components/icons/CheckIcon";
 import { ChevronDownIcon } from "@/components/icons/ChevronDownIcon";
 import { EyeIcon } from "@/components/icons/EyeIcon";
+import { EyeOffIcon } from "@/components/icons/EyeOffIcon";
 import { LogoIcon } from "@/components/icons/LogoIcon";
 import { PencilIcon } from "@/components/icons/PencilIcon";
 import { SearchIcon } from "@/components/icons/SearchIcon";
 import { TrashIcon } from "@/components/icons/TrashIcon";
 
 const icons = {
+  AlertCircleIcon,
   CheckIcon,
   ChevronDownIcon,
   EyeIcon,
+  EyeOffIcon,
   LogoIcon,
   PencilIcon,
   SearchIcon,
