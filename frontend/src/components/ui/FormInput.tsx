@@ -15,22 +15,27 @@ type FormInputProps = Omit<
   label: string;
   type?: "text" | "email" | "password";
   error?: string;
+  hint?: string;
 };
 
 export function FormInput({
   label,
   type = "text",
   error,
+  hint,
   ...inputProps
 }: FormInputProps) {
   const inputId = useId();
   const errorId = `${inputId}-error`;
+  const hintId = `${inputId}-hint`;
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const isPassword = type === "password";
   const inputType = isPassword && isPasswordVisible ? "text" : type;
   const borderClass = error ? "border-danger" : "border-input-border";
   const paddingClass = isPassword ? "pr-12" : "";
+  const describedBy =
+    [hint && hintId, error && errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div>
@@ -43,7 +48,7 @@ export function FormInput({
           id={inputId}
           type={inputType}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedBy}
           className={`h-11 w-full rounded-lg border bg-card px-3 text-base text-ink placeholder:text-muted focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-60 ${borderClass} ${paddingClass}`}
         />
         {isPassword && (
@@ -64,6 +69,11 @@ export function FormInput({
           </button>
         )}
       </div>
+      {hint && (
+        <p id={hintId} className="mt-1 text-sm text-muted">
+          {hint}
+        </p>
+      )}
       <div className="mt-1 min-h-5">
         {error && (
           <p
