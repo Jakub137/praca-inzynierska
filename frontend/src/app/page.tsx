@@ -5,7 +5,6 @@ import { LogoIcon } from "@/components/icons/LogoIcon";
 import { PencilIcon } from "@/components/icons/PencilIcon";
 import { SearchIcon } from "@/components/icons/SearchIcon";
 import { TrashIcon } from "@/components/icons/TrashIcon";
-import { FormInput } from "@/components/ui/FormInput";
 
 export default function HomePage() {
   return (
@@ -23,44 +22,6 @@ export default function HomePage() {
         <ChevronDownIcon className="size-6" />
         <CheckIcon className="size-6" />
       </div>
-      <section aria-labelledby="form-input-preview" className="mt-10 max-w-md">
-        <h2 id="form-input-preview" className="text-xl font-semibold">
-          Podgląd FormInput (tymczasowy, T-023)
-        </h2>
-        <div className="mt-4 space-y-2">
-          <FormInput label="Imię" name="firstName" autoComplete="given-name" />
-          <FormInput
-            label="E-mail"
-            type="email"
-            name="email"
-            autoComplete="email"
-          />
-          <FormInput
-            label="Hasło"
-            type="password"
-            name="password"
-            autoComplete="new-password"
-          />
-          <FormInput
-            label="Powtórz hasło"
-            type="password"
-            name="passwordConfirmation"
-            autoComplete="new-password"
-          />
-          <FormInput
-            label="E-mail z błędem"
-            type="email"
-            name="emailWithError"
-            defaultValue="jan"
-            error="Podaj adres e-mail w formacie jan@example.com."
-          />
-          <FormInput
-            label="Pole wyłączone"
-            disabled
-            defaultValue="Nieaktywne"
-          />
-        </div>
-      </section>
     </main>
   );
 }
