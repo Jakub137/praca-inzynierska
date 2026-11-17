@@ -12,6 +12,9 @@ public final class ErrorMessages {
 	public static final Text EMAIL_TAKEN = new Text(
 			"Konflikt danych",
 			"Adres e-mail jest już zajęty przez inne konto");
+	public static final Text CATEGORY_EXISTS = new Text(
+			"Konflikt danych",
+			"Kategoria o tej nazwie już istnieje.");
 	public static final Text INTERNAL = new Text(
 			"Błąd serwera",
 			"Wystąpił nieoczekiwany błąd. Spróbuj ponownie później.");

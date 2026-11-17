@@ -22,6 +22,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import jakarta.servlet.http.HttpServletRequest;
+import pl.saldo.category.domain.CategoryAlreadyExistsException;
 import pl.saldo.user.domain.UserAlreadyExistsException;
 
 @RestControllerAdvice
@@ -68,6 +69,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(UserAlreadyExistsException.class)
 	public ProblemDetail handleUserAlreadyExists() {
 		return problem(HttpStatus.CONFLICT, ErrorMessages.EMAIL_TAKEN);
+	}
+
+	@ExceptionHandler(CategoryAlreadyExistsException.class)
+	public ProblemDetail handleCategoryAlreadyExists() {
+		return problem(HttpStatus.CONFLICT, ErrorMessages.CATEGORY_EXISTS);
 	}
 
 	@ExceptionHandler(BadCredentialsException.class)
