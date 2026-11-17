@@ -1,9 +1,12 @@
 import { ApiError, NetworkError, RequestTimeoutError } from "@/lib/api/errors";
+import { PUBLIC_AUTH_API_PATHS } from "@/lib/auth/constants";
+import { notifyUnauthorized } from "@/lib/auth/events";
 import type { ProblemDetail } from "@/types/api";
 
 export const REQUEST_TIMEOUT_MS = 5000;
 
 const HTTP_NO_CONTENT = 204;
+const HTTP_UNAUTHORIZED = 401;
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -41,6 +44,11 @@ function isTimeoutError(error: unknown): boolean {
   );
 }
 
+function isPublicAuthPath(path: string): boolean {
+  const pathname = path.split("?")[0];
+  return PUBLIC_AUTH_API_PATHS.some((publicPath) => publicPath === pathname);
+}
+
 async function send(url: string, options: RequestOptions): Promise<Response> {
   try {
     return await fetch(url, {
@@ -73,6 +81,9 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const response = await send(`${getBaseUrl()}${path}`, options);
   if (!response.ok) {
+    if (response.status === HTTP_UNAUTHORIZED && !isPublicAuthPath(path)) {
+      notifyUnauthorized();
+    }
     throw new ApiError(response.status, await parseProblem(response));
   }
   if (response.status === HTTP_NO_CONTENT) {
