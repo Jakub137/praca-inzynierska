@@ -106,6 +106,55 @@ class CategoryRepositoryTest {
 		assertThat(loaded.isDefault()).isFalse();
 	}
 
+	// "żywność" vs "Żywność" needs database-side upper() to follow the ICU pl-PL locale (ADR-006).
+	@Test
+	void shouldFindDuplicateIgnoringCaseWithPolishLetters() {
+		UserEntity owner = saveUser("owner@example.com");
+		categoryRepository.saveAndFlush(new CategoryEntity(owner.getId(), "żywność", null, TransactionType.EXPENSE));
+
+		boolean result = categoryRepository.existsDuplicate(owner.getId(), "Żywność", TransactionType.EXPENSE);
+
+		assertThat(result).isTrue();
+	}
+
+	@Test
+	void shouldFindDuplicateOfSystemCategoryOfTheSameType() {
+		UserEntity user = saveUser("owner@example.com");
+
+		boolean result = categoryRepository.existsDuplicate(user.getId(), "transport", TransactionType.EXPENSE);
+
+		assertThat(result).isTrue();
+	}
+
+	@Test
+	void shouldNotFindDuplicateWhenTypeDiffers() {
+		UserEntity owner = saveUser("owner@example.com");
+		categoryRepository.saveAndFlush(new CategoryEntity(owner.getId(), "Bilety", null, TransactionType.EXPENSE));
+
+		assertThat(categoryRepository.existsDuplicate(owner.getId(), "Bilety", TransactionType.INCOME)).isFalse();
+		assertThat(categoryRepository.existsDuplicate(owner.getId(), "Transport", TransactionType.INCOME)).isFalse();
+	}
+
+	@Test
+	void shouldNotFindDuplicateOwnedByAnotherUser() {
+		UserEntity owner = saveUser("owner@example.com");
+		UserEntity other = saveUser("other@example.com");
+		categoryRepository.saveAndFlush(new CategoryEntity(other.getId(), "Bilety", null, TransactionType.EXPENSE));
+
+		boolean result = categoryRepository.existsDuplicate(owner.getId(), "Bilety", TransactionType.EXPENSE);
+
+		assertThat(result).isFalse();
+	}
+
+	@Test
+	void shouldNotFindDuplicateForNewName() {
+		UserEntity user = saveUser("owner@example.com");
+
+		boolean result = categoryRepository.existsDuplicate(user.getId(), "Zupełnie nowa", TransactionType.EXPENSE);
+
+		assertThat(result).isFalse();
+	}
+
 	private UserEntity saveUser(String email) {
 		return userRepository.saveAndFlush(
 				new UserEntity(email, "hash", "Jan", "Kowalski", SupportedCurrency.PLN, NOW));
