@@ -88,6 +88,18 @@ describe("RegisterForm", () => {
     expect(registerUserMock).not.toHaveBeenCalled();
   });
 
+  it("toggles the password and the confirmation independently", () => {
+    const password = screen.getByLabelText("Hasło");
+    const confirmation = screen.getByLabelText("Powtórz hasło");
+    expect(password.getAttribute("type")).toBe("password");
+    expect(confirmation.getAttribute("type")).toBe("password");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Pokaż hasło" })[0]);
+
+    expect(password.getAttribute("type")).toBe("text");
+    expect(confirmation.getAttribute("type")).toBe("password");
+  });
+
   it("blocks submit when the terms are not accepted", () => {
     fillValidForm();
     fireEvent.click(screen.getByLabelText(TERMS_LABEL));
