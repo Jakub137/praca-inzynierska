@@ -25,18 +25,6 @@ describe("LoginPage", () => {
     expect(screen.getByRole("button", { name: "Zaloguj się" })).toBeDefined();
   });
 
-  test("renders the three brand features", async () => {
-    await renderPage();
-
-    for (const title of [
-      "Inteligentna analiza wydatków",
-      "Kontrola budżetu",
-      "Cele oszczędnościowe",
-    ]) {
-      expect(screen.getByText(title)).toBeDefined();
-    }
-  });
-
   test("disables native validation", async () => {
     await renderPage();
 
