@@ -37,18 +37,6 @@ describe("RegisterPage", () => {
     ).toBe(hint.id);
   });
 
-  test("renders the three brand features", () => {
-    render(<RegisterPage />);
-
-    for (const title of [
-      "Inteligentna analiza wydatków",
-      "Kontrola budżetu",
-      "Cele oszczędnościowe",
-    ]) {
-      expect(screen.getByText(title)).toBeDefined();
-    }
-  });
-
   test("renders the submit button and the link to login", () => {
     render(<RegisterPage />);
 

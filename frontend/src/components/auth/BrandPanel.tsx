@@ -33,7 +33,7 @@ const BRAND_FEATURES: readonly BrandFeature[] = [
 
 export function BrandPanel() {
   return (
-    <aside className="hidden bg-brand bg-linear-to-br from-transparent to-ink/30 p-12 text-white lg:flex lg:w-1/2 lg:flex-col lg:justify-center">
+    <aside className="flex w-full flex-col justify-center bg-brand bg-linear-to-br from-transparent to-ink/30 p-12 text-white">
       <div className="mx-auto w-full max-w-xl">
         <p className="text-4xl leading-tight font-semibold">
           Rozpocznij zarządzanie swoimi finansami z aplikacją Saldo
