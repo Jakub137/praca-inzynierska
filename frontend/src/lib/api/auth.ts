@@ -21,3 +21,8 @@ export function loginUser(request: LoginRequest): Promise<AuthResponse> {
     body: request,
   });
 }
+
+// Unlike register and login, /auth/me is protected: it needs the Bearer token.
+export function getCurrentUser(token: string): Promise<UserResponse> {
+  return apiRequest<UserResponse>("/auth/me", { token });
+}
