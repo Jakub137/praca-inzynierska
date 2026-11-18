@@ -155,6 +155,40 @@ class CategoryRepositoryTest {
 		assertThat(result).isFalse();
 	}
 
+	@Test
+	void shouldFindOwnCategoryById() {
+		UserEntity owner = saveUser("owner@example.com");
+		CategoryEntity saved = categoryRepository.saveAndFlush(
+				new CategoryEntity(owner.getId(), "Bilety", null, TransactionType.EXPENSE));
+
+		assertThat(categoryRepository.findAccessibleById(saved.getId(), owner.getId())).isPresent();
+	}
+
+	@Test
+	void shouldFindSystemCategoryByIdForAnyUser() {
+		UserEntity user = saveUser("owner@example.com");
+		CategoryEntity system = categoryRepository.findAllByUserIdOrIsDefaultTrue(user.getId(), ORDER).get(0);
+
+		assertThat(categoryRepository.findAccessibleById(system.getId(), user.getId())).isPresent();
+	}
+
+	@Test
+	void shouldNotFindCategoryOwnedByAnotherUser() {
+		UserEntity owner = saveUser("owner@example.com");
+		UserEntity other = saveUser("other@example.com");
+		CategoryEntity foreign = categoryRepository.saveAndFlush(
+				new CategoryEntity(other.getId(), "Cudza", null, TransactionType.EXPENSE));
+
+		assertThat(categoryRepository.findAccessibleById(foreign.getId(), owner.getId())).isEmpty();
+	}
+
+	@Test
+	void shouldNotFindNonexistentCategory() {
+		UserEntity user = saveUser("owner@example.com");
+
+		assertThat(categoryRepository.findAccessibleById(Long.MAX_VALUE, user.getId())).isEmpty();
+	}
+
 	private UserEntity saveUser(String email) {
 		return userRepository.saveAndFlush(
 				new UserEntity(email, "hash", "Jan", "Kowalski", SupportedCurrency.PLN, NOW));

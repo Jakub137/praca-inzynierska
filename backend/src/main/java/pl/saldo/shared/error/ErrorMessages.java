@@ -27,6 +27,15 @@ public final class ErrorMessages {
 	public static final Text FORBIDDEN = new Text(
 			"Brak dostępu",
 			"Nie masz uprawnień do wykonania tej operacji.");
+	public static final Text CATEGORY_TYPE_MISMATCH = new Text(
+			"Nieprawidłowa kategoria",
+			"Typ kategorii nie zgadza się z typem transakcji. Wybierz kategorię wydatków dla wydatku albo kategorię przychodów dla przychodu.");
+	public static final Text AMOUNT_PLN_LIMIT_EXCEEDED = new Text(
+			"Błąd walidacji",
+			"Kwota po przeliczeniu na PLN przekracza dopuszczalny limit. Wpisz mniejszą kwotę.");
+	public static final Text EXCHANGE_RATE_UNAVAILABLE = new Text(
+			"Usługa niedostępna",
+			"Nie udało się pobrać kursu waluty. Spróbuj ponownie za chwilę albo wybierz walutę PLN.");
 
 	private static final Text BAD_REQUEST = new Text(
 			"Nieprawidłowe żądanie",

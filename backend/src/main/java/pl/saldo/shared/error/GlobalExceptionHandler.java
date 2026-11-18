@@ -23,6 +23,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import jakarta.servlet.http.HttpServletRequest;
 import pl.saldo.category.domain.CategoryAlreadyExistsException;
+import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.transaction.domain.AmountPlnLimitExceededException;
+import pl.saldo.transaction.domain.CategoryTypeMismatchException;
 import pl.saldo.user.domain.UserAlreadyExistsException;
 
 @RestControllerAdvice
@@ -74,6 +77,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(CategoryAlreadyExistsException.class)
 	public ProblemDetail handleCategoryAlreadyExists() {
 		return problem(HttpStatus.CONFLICT, ErrorMessages.CATEGORY_EXISTS);
+	}
+
+	@ExceptionHandler(ResourceNotFoundException.class)
+	public ProblemDetail handleResourceNotFound() {
+		return problem(HttpStatus.NOT_FOUND, ErrorMessages.forStatus(HttpStatus.NOT_FOUND.value()));
+	}
+
+	@ExceptionHandler(CategoryTypeMismatchException.class)
+	public ProblemDetail handleCategoryTypeMismatch() {
+		return problem(HttpStatus.BAD_REQUEST, ErrorMessages.CATEGORY_TYPE_MISMATCH);
+	}
+
+	@ExceptionHandler(AmountPlnLimitExceededException.class)
+	public ProblemDetail handleAmountPlnLimitExceeded() {
+		return problem(HttpStatus.BAD_REQUEST, ErrorMessages.AMOUNT_PLN_LIMIT_EXCEEDED);
+	}
+
+	@ExceptionHandler(ExchangeRateUnavailableException.class)
+	public ProblemDetail handleExchangeRateUnavailable() {
+		return problem(HttpStatus.SERVICE_UNAVAILABLE, ErrorMessages.EXCHANGE_RATE_UNAVAILABLE);
 	}
 
 	@ExceptionHandler(BadCredentialsException.class)
