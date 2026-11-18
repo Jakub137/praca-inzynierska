@@ -1,6 +1,5 @@
 package pl.saldo.currency.infrastructure;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -13,7 +12,9 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import pl.saldo.currency.domain.ExchangeRateProvider;
+import pl.saldo.currency.domain.ExchangeRateQuote;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.currency.domain.RateSource;
 import pl.saldo.currency.domain.SupportedCurrency;
 
 public class NbpExchangeRateProvider implements ExchangeRateProvider {
@@ -26,7 +27,7 @@ public class NbpExchangeRateProvider implements ExchangeRateProvider {
 	private final WebClient webClient;
 	private final Clock clock;
 	private final Duration requestTimeout;
-	private final Cache<RateKey, BigDecimal> cache = Caffeine.newBuilder()
+	private final Cache<RateKey, ExchangeRateQuote> cache = Caffeine.newBuilder()
 			.maximumSize(CACHE_MAX_SIZE)
 			.expireAfterWrite(CACHE_TTL)
 			.build();
@@ -38,18 +39,18 @@ public class NbpExchangeRateProvider implements ExchangeRateProvider {
 	}
 
 	@Override
-	public BigDecimal fetchRate(SupportedCurrency currency, LocalDate date) {
+	public ExchangeRateQuote fetchQuote(SupportedCurrency currency, LocalDate date) {
 		// NBP rejects future dates, so the range never ends after today.
 		LocalDate endDate = earlierOf(date, LocalDate.now(clock));
-		return cache.get(new RateKey(currency, endDate), this::loadRate);
+		return cache.get(new RateKey(currency, endDate), this::loadQuote);
 	}
 
-	private BigDecimal loadRate(RateKey key) {
+	private ExchangeRateQuote loadQuote(RateKey key) {
 		// NBP publishes no table on weekends and holidays (and before ~12:00 on working days),
 		// so we ask for a window and use the newest published day in it.
 		LocalDate startDate = key.endDate().minusDays(LOOKBACK_DAYS);
 		NbpRatesResponse response = requestRates(key.currency(), startDate, key.endDate());
-		return latestRate(response).orElseThrow(() -> new ExchangeRateUnavailableException(
+		return latestQuote(response).orElseThrow(() -> new ExchangeRateUnavailableException(
 				"NBP returned no rate for " + key.currency() + " up to " + key.endDate()));
 	}
 
@@ -67,14 +68,14 @@ public class NbpExchangeRateProvider implements ExchangeRateProvider {
 		}
 	}
 
-	private static Optional<BigDecimal> latestRate(NbpRatesResponse response) {
+	private static Optional<ExchangeRateQuote> latestQuote(NbpRatesResponse response) {
 		if (response == null || response.rates() == null) {
 			return Optional.empty();
 		}
 		return response.rates().stream()
 				.filter(rate -> rate.effectiveDate() != null && rate.mid() != null)
 				.max(Comparator.comparing(NbpRatesResponse.Rate::effectiveDate))
-				.map(NbpRatesResponse.Rate::mid);
+				.map(rate -> new ExchangeRateQuote(rate.mid(), rate.effectiveDate(), RateSource.NBP));
 	}
 
 	private static LocalDate earlierOf(LocalDate first, LocalDate second) {

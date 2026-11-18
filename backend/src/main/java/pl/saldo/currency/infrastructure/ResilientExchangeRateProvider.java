@@ -1,12 +1,12 @@
 package pl.saldo.currency.infrastructure;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import pl.saldo.currency.domain.ExchangeRateProvider;
+import pl.saldo.currency.domain.ExchangeRateQuote;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
 import pl.saldo.currency.domain.SupportedCurrency;
 
@@ -23,16 +23,16 @@ public class ResilientExchangeRateProvider implements ExchangeRateProvider {
 	}
 
 	@Override
-	public BigDecimal fetchRate(SupportedCurrency currency, LocalDate date) {
+	public ExchangeRateQuote fetchQuote(SupportedCurrency currency, LocalDate date) {
 		try {
-			BigDecimal rate = primary.fetchRate(currency, date);
-			fallback.remember(currency, date, rate);
-			return rate;
+			ExchangeRateQuote quote = primary.fetchQuote(currency, date);
+			fallback.remember(currency, quote);
+			return quote;
 		} catch (ExchangeRateUnavailableException e) {
 			// Only the domain exception triggers the fallback; programming errors must surface.
 			log.warn("Exchange rate source unavailable, activating fallback for {} on {}: {}",
 					currency, date, describeReason(e));
-			return fallback.fetchRate(currency, date);
+			return fallback.fetchQuote(currency, date);
 		}
 	}
 

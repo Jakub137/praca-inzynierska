@@ -1,42 +1,39 @@
 package pl.saldo.currency.infrastructure;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import pl.saldo.currency.domain.ExchangeRateProvider;
+import pl.saldo.currency.domain.ExchangeRateQuote;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.currency.domain.RateSource;
 import pl.saldo.currency.domain.SupportedCurrency;
 
 public class FallbackExchangeRateProvider implements ExchangeRateProvider {
 
-	private final Map<SupportedCurrency, DatedRate> lastKnownRates = new ConcurrentHashMap<>();
+	private final Map<SupportedCurrency, ExchangeRateQuote> lastKnownQuotes = new ConcurrentHashMap<>();
 
-	public void remember(SupportedCurrency currency, LocalDate date, BigDecimal rate) {
+	public void remember(SupportedCurrency currency, ExchangeRateQuote quote) {
 		Objects.requireNonNull(currency, "currency must not be null");
-		Objects.requireNonNull(date, "date must not be null");
-		Objects.requireNonNull(rate, "rate must not be null");
-		// A lookup for an old transaction must not replace a rate of a more recent date.
-		lastKnownRates.merge(currency, new DatedRate(date, rate), FallbackExchangeRateProvider::newer);
+		Objects.requireNonNull(quote, "quote must not be null");
+		// A lookup for an old transaction must not replace a quote published more recently.
+		lastKnownQuotes.merge(currency, quote, FallbackExchangeRateProvider::newer);
 	}
 
 	@Override
-	public BigDecimal fetchRate(SupportedCurrency currency, LocalDate date) {
-		// The requested date is ignored on purpose: only the newest known rate per currency is kept.
-		DatedRate known = lastKnownRates.get(currency);
+	public ExchangeRateQuote fetchQuote(SupportedCurrency currency, LocalDate date) {
+		// The requested date is ignored on purpose: only the newest known quote per currency is kept.
+		ExchangeRateQuote known = lastKnownQuotes.get(currency);
 		if (known == null) {
 			throw new ExchangeRateUnavailableException("No last known rate for " + currency);
 		}
-		return known.rate();
+		return new ExchangeRateQuote(known.rate(), known.effectiveDate(), RateSource.FALLBACK);
 	}
 
-	private static DatedRate newer(DatedRate current, DatedRate candidate) {
-		return candidate.date().isBefore(current.date()) ? current : candidate;
-	}
-
-	private record DatedRate(LocalDate date, BigDecimal rate) {
+	private static ExchangeRateQuote newer(ExchangeRateQuote current, ExchangeRateQuote candidate) {
+		return candidate.effectiveDate().isBefore(current.effectiveDate()) ? current : candidate;
 	}
 
 }

@@ -32,7 +32,9 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import pl.saldo.currency.domain.ExchangeRateProvider;
+import pl.saldo.currency.domain.ExchangeRateQuote;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.currency.domain.RateSource;
 import pl.saldo.currency.domain.SupportedCurrency;
 import reactor.core.publisher.Mono;
 
@@ -42,7 +44,10 @@ class ResilientExchangeRateProviderTest {
 	private static final Duration TIMEOUT = Duration.ofMillis(200);
 	private static final LocalDate TUESDAY = LocalDate.of(2026, 11, 17);
 	private static final LocalDate MONDAY = LocalDate.of(2026, 11, 16);
+	private static final LocalDate SUNDAY = LocalDate.of(2026, 11, 15);
+	private static final LocalDate FRIDAY = LocalDate.of(2026, 11, 13);
 	private static final BigDecimal RATE = new BigDecimal("4.4032");
+	private static final ExchangeRateQuote QUOTE = new ExchangeRateQuote(RATE, TUESDAY, RateSource.NBP);
 	private static final String TUESDAY_RESPONSE = """
 			{"table":"A","currency":"euro","code":"EUR","rates":[
 			{"no":"223/A/NBP/2026","effectiveDate":"2026-11-17","mid":4.4032}]}
@@ -81,20 +86,21 @@ class ResilientExchangeRateProviderTest {
 	}
 
 	@Test
-	void shouldReturnPrimaryRateAndRememberItWithoutLogging() {
-		when(primary.fetchRate(any(), any())).thenReturn(RATE);
+	void shouldReturnPrimaryQuoteAndRememberItWithoutLogging() {
+		when(primary.fetchQuote(any(), any())).thenReturn(QUOTE);
 
-		BigDecimal rate = provider.getRate(SupportedCurrency.EUR, TUESDAY);
+		ExchangeRateQuote quote = provider.getQuote(SupportedCurrency.EUR, TUESDAY);
 
-		assertThat(rate).isEqualTo(RATE);
+		assertThat(quote).isEqualTo(QUOTE);
+		assertThat(quote.source()).isEqualTo(RateSource.NBP);
 		assertThat(fallback.getRate(SupportedCurrency.EUR, TUESDAY)).isEqualTo(RATE);
 		assertThat(logAppender.list).isEmpty();
 	}
 
 	@Test
 	void shouldReturnLastKnownRateWhenPrimaryIsUnavailable() {
-		when(primary.fetchRate(any(), any()))
-				.thenReturn(RATE)
+		when(primary.fetchQuote(any(), any()))
+				.thenReturn(QUOTE)
 				.thenThrow(new ExchangeRateUnavailableException("NBP down"));
 		provider.getRate(SupportedCurrency.EUR, TUESDAY);
 
@@ -104,8 +110,23 @@ class ResilientExchangeRateProviderTest {
 	}
 
 	@Test
+	void shouldReturnFallbackQuoteWithPublicationDateInsteadOfRequestedDate() {
+		ExchangeRateQuote fridayQuote = new ExchangeRateQuote(RATE, FRIDAY, RateSource.NBP);
+		when(primary.fetchQuote(any(), any()))
+				.thenReturn(fridayQuote)
+				.thenThrow(new ExchangeRateUnavailableException("NBP down"));
+		provider.getQuote(SupportedCurrency.EUR, SUNDAY);
+
+		ExchangeRateQuote quote = provider.getQuote(SupportedCurrency.EUR, TUESDAY);
+
+		assertThat(quote.source()).isEqualTo(RateSource.FALLBACK);
+		assertThat(quote.effectiveDate()).isEqualTo(FRIDAY).isNotEqualTo(TUESDAY);
+		assertThat(quote.rate()).isEqualTo(RATE);
+	}
+
+	@Test
 	void shouldThrowWhenPrimaryIsUnavailableAndNothingRemembered() {
-		when(primary.fetchRate(any(), any())).thenThrow(new ExchangeRateUnavailableException("NBP down"));
+		when(primary.fetchQuote(any(), any())).thenThrow(new ExchangeRateUnavailableException("NBP down"));
 
 		assertThatThrownBy(() -> provider.getRate(SupportedCurrency.EUR, TUESDAY))
 				.isInstanceOf(ExchangeRateUnavailableException.class)
@@ -114,8 +135,8 @@ class ResilientExchangeRateProviderTest {
 
 	@Test
 	void shouldNotUseRateOfAnotherCurrency() {
-		when(primary.fetchRate(eq(SupportedCurrency.EUR), any())).thenReturn(RATE);
-		when(primary.fetchRate(eq(SupportedCurrency.USD), any()))
+		when(primary.fetchQuote(eq(SupportedCurrency.EUR), any())).thenReturn(QUOTE);
+		when(primary.fetchQuote(eq(SupportedCurrency.USD), any()))
 				.thenThrow(new ExchangeRateUnavailableException("NBP down"));
 		provider.getRate(SupportedCurrency.EUR, TUESDAY);
 
@@ -125,8 +146,8 @@ class ResilientExchangeRateProviderTest {
 
 	@Test
 	void shouldNotSwallowUnexpectedExceptions() {
-		when(primary.fetchRate(any(), any())).thenThrow(new IllegalStateException("bug"));
-		fallback.remember(SupportedCurrency.EUR, TUESDAY, RATE);
+		when(primary.fetchQuote(any(), any())).thenThrow(new IllegalStateException("bug"));
+		fallback.remember(SupportedCurrency.EUR, QUOTE);
 
 		assertThatThrownBy(() -> provider.getRate(SupportedCurrency.EUR, TUESDAY))
 				.isInstanceOf(IllegalStateException.class);
@@ -135,8 +156,8 @@ class ResilientExchangeRateProviderTest {
 
 	@Test
 	void shouldLogWarningWithCurrencyDateAndReasonButNoStackTrace() {
-		when(primary.fetchRate(any(), any()))
-				.thenReturn(RATE)
+		when(primary.fetchQuote(any(), any()))
+				.thenReturn(QUOTE)
 				.thenThrow(new ExchangeRateUnavailableException("NBP request failed",
 						new IOException("Connection refused")));
 		provider.getRate(SupportedCurrency.EUR, TUESDAY);
@@ -165,9 +186,11 @@ class ResilientExchangeRateProviderTest {
 		nbpBackedProvider.getRate(SupportedCurrency.EUR, TUESDAY);
 		respondWith(HttpStatus.SERVICE_UNAVAILABLE, "error");
 
-		BigDecimal rate = nbpBackedProvider.getRate(SupportedCurrency.EUR, MONDAY);
+		ExchangeRateQuote quote = nbpBackedProvider.getQuote(SupportedCurrency.EUR, MONDAY);
 
-		assertThat(rate).isEqualTo(RATE);
+		assertThat(quote.rate()).isEqualTo(RATE);
+		assertThat(quote.source()).isEqualTo(RateSource.FALLBACK);
+		assertThat(quote.effectiveDate()).isEqualTo(TUESDAY);
 		assertThat(logAppender.list).hasSize(1);
 		assertThat(logAppender.list.get(0).getLevel()).isEqualTo(Level.WARN);
 	}

@@ -25,7 +25,9 @@ import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import pl.saldo.currency.domain.ExchangeRateQuote;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.currency.domain.RateSource;
 import pl.saldo.currency.domain.SupportedCurrency;
 import reactor.core.publisher.Mono;
 
@@ -86,6 +88,28 @@ class NbpExchangeRateProviderTest {
 		assertThat(rate).isEqualTo(new BigDecimal("4.4070"));
 		assertThat(requestedUrls()).containsExactly(
 				"https://api.nbp.pl/api/exchangerates/rates/a/EUR/2026-11-05/2026-11-15/?format=json");
+	}
+
+	@Test
+	void shouldReturnQuoteWithPublicationDateOfNewestNbpEntry() {
+		respondWith(HttpStatus.OK, WEEKEND_RESPONSE);
+
+		ExchangeRateQuote quote = provider.getQuote(SupportedCurrency.EUR, SUNDAY);
+
+		assertThat(quote.rate()).isEqualTo(new BigDecimal("4.4070"));
+		assertThat(quote.effectiveDate()).isEqualTo(LocalDate.of(2026, 11, 13));
+		assertThat(quote.source()).isEqualTo(RateSource.NBP);
+	}
+
+	@Test
+	void shouldKeepPublicationDateInCachedQuote() {
+		respondWith(HttpStatus.OK, WEEKEND_RESPONSE);
+		provider.getQuote(SupportedCurrency.EUR, SUNDAY);
+
+		ExchangeRateQuote cached = provider.getQuote(SupportedCurrency.EUR, SUNDAY);
+
+		assertThat(cached.effectiveDate()).isEqualTo(LocalDate.of(2026, 11, 13));
+		assertThat(requests).hasSize(1);
 	}
 
 	@Test
