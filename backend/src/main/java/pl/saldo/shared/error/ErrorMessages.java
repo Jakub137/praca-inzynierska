@@ -36,6 +36,9 @@ public final class ErrorMessages {
 	public static final Text EXCHANGE_RATE_UNAVAILABLE = new Text(
 			"Usługa niedostępna",
 			"Nie udało się pobrać kursu waluty. Spróbuj ponownie za chwilę albo wybierz walutę PLN.");
+	public static final Text INVALID_QUERY = new Text(
+			"Błąd walidacji",
+			"Parametry zapytania są nieprawidłowe. Popraw zaznaczone parametry.");
 
 	private static final Text BAD_REQUEST = new Text(
 			"Nieprawidłowe żądanie",
