@@ -5,10 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+
+import pl.saldo.transaction.domain.InvalidTransactionQueryException;
 
 class GlobalExceptionHandlerTest {
 
@@ -46,6 +49,17 @@ class GlobalExceptionHandlerTest {
 
 		assertProblem(problem, HttpStatus.BAD_REQUEST, "Błąd walidacji",
 				"Kwota po przeliczeniu na PLN przekracza dopuszczalny limit. Wpisz mniejszą kwotę.");
+	}
+
+	@Test
+	void shouldMapInvalidTransactionQueryTo400WithFieldErrors() {
+		List<ApiFieldError> fieldErrors = List.of(new ApiFieldError("size", "Rozmiar strony musi mieścić się w przedziale od 1 do 100"));
+
+		ProblemDetail problem = handler.handleInvalidTransactionQuery(new InvalidTransactionQueryException(fieldErrors));
+
+		assertProblem(problem, HttpStatus.BAD_REQUEST, "Błąd walidacji",
+				"Parametry zapytania są nieprawidłowe. Popraw zaznaczone parametry.");
+		assertThat(problem.getProperties()).containsEntry("fieldErrors", fieldErrors);
 	}
 
 	private static void assertProblem(ProblemDetail problem, HttpStatus status, String title, String detail) {

@@ -10,6 +10,7 @@ import static org.mockito.BDDMockito.willThrow;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,6 +28,7 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
 import pl.saldo.currency.domain.SupportedCurrency;
+import pl.saldo.shared.api.PageResponse;
 import pl.saldo.shared.config.ClockConfiguration;
 import pl.saldo.shared.error.ResourceNotFoundException;
 import pl.saldo.shared.security.JwtService;
@@ -39,6 +41,8 @@ import pl.saldo.transaction.usecase.CreateTransactionCommand;
 import pl.saldo.transaction.usecase.CreateTransactionUseCase;
 import pl.saldo.transaction.usecase.DeleteTransactionUseCase;
 import pl.saldo.transaction.usecase.GetTransactionUseCase;
+import pl.saldo.transaction.usecase.GetTransactionsQuery;
+import pl.saldo.transaction.usecase.GetTransactionsUseCase;
 import pl.saldo.transaction.usecase.UpdateTransactionCommand;
 import pl.saldo.transaction.usecase.UpdateTransactionUseCase;
 import pl.saldo.user.domain.UserEntity;
@@ -70,6 +74,9 @@ class TransactionControllerTest {
 
 	@MockitoBean
 	private GetTransactionUseCase getTransactionUseCase;
+
+	@MockitoBean
+	private GetTransactionsUseCase getTransactionsUseCase;
 
 	@MockitoBean
 	private UpdateTransactionUseCase updateTransactionUseCase;
@@ -229,6 +236,103 @@ class TransactionControllerTest {
 	}
 
 	@Test
+	void shouldReturn200WithPageResponseOnList() {
+		authenticate();
+		given(getTransactionsUseCase.execute(USER_ID, defaultQuery()))
+				.willReturn(new PageResponse<>(List.of(RESPONSE), 0, 20, 1, 1));
+
+		MvcTestResult result = get(TRANSACTIONS_URI);
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyJson().extractingPath("$.content[0].id").isEqualTo(TRANSACTION_ID.toString());
+		assertThat(result).bodyJson().extractingPath("$.content[0].categoryName").isEqualTo("Transport");
+		assertThat(result).bodyJson().extractingPath("$.page").isEqualTo(0);
+		assertThat(result).bodyJson().extractingPath("$.size").isEqualTo(20);
+		assertThat(result).bodyJson().extractingPath("$.totalElements").isEqualTo(1);
+		assertThat(result).bodyJson().extractingPath("$.totalPages").isEqualTo(1);
+		assertThat(result).bodyJson().doesNotHavePath("$.content[0].userId");
+	}
+
+	@Test
+	void shouldPassAllQueryParametersToUseCaseOnList() {
+		authenticate();
+		GetTransactionsQuery expected = GetTransactionsQuery.of(
+				1, 5, "amountPln", "asc", 5L, TransactionType.EXPENSE, LocalDate.of(2026, 11, 1),
+				LocalDate.of(2026, 11, 30));
+		given(getTransactionsUseCase.execute(USER_ID, expected))
+				.willReturn(new PageResponse<>(List.of(), 1, 5, 0, 0));
+
+		MvcTestResult result = get(TRANSACTIONS_URI + "?page=1&size=5&sortBy=amountPln&sortDirection=asc"
+				+ "&categoryId=5&type=EXPENSE&dateFrom=2026-11-01&dateTo=2026-11-30");
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+				assertThat(result).bodyJson().extractingPath("$.content").asArray().isEmpty();
+		then(getTransactionsUseCase).should().execute(USER_ID, expected);
+	}
+
+	@Test
+	void shouldReturn400WithFieldErrorWhenSortByIsOutsideWhitelistOnList() {
+		authenticate();
+
+		MvcTestResult result = get(TRANSACTIONS_URI + "?sortBy=password");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.title").isEqualTo("Błąd walidacji");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("sortBy");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message")
+				.isEqualTo("Sortowanie jest możliwe tylko po polach: date, amountPln, createdAt");
+		assertThat(result).bodyJson().hasPath("$.timestamp");
+		then(getTransactionsUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WhenSizeIsAboveMaximumOnList() {
+		authenticate();
+
+		MvcTestResult result = get(TRANSACTIONS_URI + "?size=101");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("size");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message")
+				.isEqualTo("Rozmiar strony musi mieścić się w przedziale od 1 do 100");
+		then(getTransactionsUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WhenDateFromIsAfterDateToOnList() {
+		authenticate();
+
+		MvcTestResult result = get(TRANSACTIONS_URI + "?dateFrom=2026-11-30&dateTo=2026-11-01");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("dateFrom");
+		then(getTransactionsUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WhenParameterHasWrongTypeOnList() {
+		authenticate();
+
+		MvcTestResult categoryResult = get(TRANSACTIONS_URI + "?categoryId=abc");
+		MvcTestResult dateResult = get(TRANSACTIONS_URI + "?dateFrom=14.11.2026");
+		MvcTestResult typeResult = get(TRANSACTIONS_URI + "?type=TRANSFER");
+
+		assertThat(categoryResult).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(categoryResult).bodyJson().extractingPath("$.title").isEqualTo("Nieprawidłowe żądanie");
+		assertThat(dateResult).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(typeResult).hasStatus(HttpStatus.BAD_REQUEST);
+		then(getTransactionsUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn401OnListWithoutToken() {
+		MvcTestResult result = mvc.get().uri(TRANSACTIONS_URI).exchange();
+
+		assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+		then(getTransactionsUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
 	void shouldReturn200WithUpdatedTransactionOnPut() {
 		authenticate();
 		given(updateTransactionUseCase.execute(USER_ID, TRANSACTION_ID, updateCommand())).willReturn(RESPONSE);
@@ -325,6 +429,10 @@ class TransactionControllerTest {
 	private static UpdateTransactionCommand updateCommand() {
 		return new UpdateTransactionCommand(
 				new BigDecimal("10.50"), SupportedCurrency.EUR, 5L, DATE, "Bilety", TransactionType.EXPENSE);
+	}
+
+	private static GetTransactionsQuery defaultQuery() {
+		return GetTransactionsQuery.of(null, null, null, null, null, null, null, null);
 	}
 
 	private MvcTestResult post(String body) {

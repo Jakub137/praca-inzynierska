@@ -26,6 +26,7 @@ import pl.saldo.category.domain.CategoryAlreadyExistsException;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
 import pl.saldo.transaction.domain.AmountPlnLimitExceededException;
 import pl.saldo.transaction.domain.CategoryTypeMismatchException;
+import pl.saldo.transaction.domain.InvalidTransactionQueryException;
 import pl.saldo.user.domain.UserAlreadyExistsException;
 
 @RestControllerAdvice
@@ -92,6 +93,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(AmountPlnLimitExceededException.class)
 	public ProblemDetail handleAmountPlnLimitExceeded() {
 		return problem(HttpStatus.BAD_REQUEST, ErrorMessages.AMOUNT_PLN_LIMIT_EXCEEDED);
+	}
+
+	@ExceptionHandler(InvalidTransactionQueryException.class)
+	public ProblemDetail handleInvalidTransactionQuery(InvalidTransactionQueryException ex) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.INVALID_QUERY);
+		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
+		return problem;
 	}
 
 	@ExceptionHandler(ExchangeRateUnavailableException.class)
