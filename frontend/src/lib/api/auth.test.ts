@@ -71,7 +71,7 @@ describe("auth API", () => {
     });
     expect(result).toEqual(authResponse);
   });
-  
+
   it("fetches the current user with the Bearer token", async () => {
     const user = { id: "1", email: "jan@example.com" };
     fetchMock.mockResolvedValue(
