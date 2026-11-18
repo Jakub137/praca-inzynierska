@@ -63,7 +63,10 @@ class CreateTransactionUseCaseTest {
 		category = new CategoryEntity(USER_ID, "Bilety", "ticket", TransactionType.EXPENSE);
 		ReflectionTestUtils.setField(category, "id", CATEGORY_ID);
 		useCase = new CreateTransactionUseCase(
-				categoryRepository, transactionRepository, rateProvider, Clock.fixed(NOW, ZoneOffset.UTC));
+				new TransactionCategoryResolver(categoryRepository),
+				new PlnConversion(rateProvider),
+				transactionRepository,
+				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 	// 0.01 * 4.5000 = 0.045 is an exact tie: HALF_UP gives 0.05 (HALF_EVEN would give 0.04).
