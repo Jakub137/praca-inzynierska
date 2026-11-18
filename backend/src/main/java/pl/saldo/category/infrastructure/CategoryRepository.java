@@ -1,6 +1,7 @@
 package pl.saldo.category.infrastructure;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Sort;
@@ -22,5 +23,10 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, Long> 
 				and (c.userId = :userId or c.isDefault = true)""")
 	boolean existsDuplicate(@Param("userId") UUID userId, @Param("name") String name,
 			@Param("type") TransactionType type);
+
+	@Query("""
+			select c from CategoryEntity c
+			where c.id = :id and (c.userId = :userId or c.isDefault = true)""")
+	Optional<CategoryEntity> findAccessibleById(@Param("id") Long id, @Param("userId") UUID userId);
 
 }
