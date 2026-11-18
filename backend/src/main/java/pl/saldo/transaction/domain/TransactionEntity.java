@@ -94,4 +94,24 @@ public class TransactionEntity {
 		this.createdAt = now;
 	}
 
+	// Owner, creation time and the recurring flag never change on edit.
+	public void update(
+			CategoryEntity category,
+			BigDecimal amount,
+			SupportedCurrency currency,
+			BigDecimal amountPln,
+			BigDecimal exchangeRate,
+			LocalDate transactionDate,
+			String description,
+			TransactionType type) {
+		this.category = category;
+		this.amount = amount;
+		this.currency = currency;
+		this.amountPln = amountPln;
+		this.exchangeRate = exchangeRate;
+		this.transactionDate = transactionDate;
+		this.description = description;
+		this.type = type;
+	}
+
 }

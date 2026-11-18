@@ -90,6 +90,24 @@ class TransactionRepositoryTest {
 		assertThat(loaded.getDescription()).isNull();
 	}
 
+	@Test
+	void shouldFindOwnTransactionWithLoadedCategoryAndHideOtherUsersTransaction() {
+		UserEntity owner = saveUser("owner@example.com");
+		UserEntity other = saveUser("other@example.com");
+		CategoryEntity category = findSystemCategory(owner, "Transport");
+		TransactionEntity saved = transactionRepository.saveAndFlush(new TransactionEntity(
+				owner.getId(), category, new BigDecimal("10.50"), SupportedCurrency.EUR, new BigDecimal("45.15"),
+				new BigDecimal("4.3000"), DATE, "Bilet", TransactionType.EXPENSE, NOW));
+		entityManager.clear();
+
+		TransactionEntity found = transactionRepository.findByIdAndUserId(saved.getId(), owner.getId()).orElseThrow();
+
+		assertThat(found.getId()).isEqualTo(saved.getId());
+		assertThat(entityManager.getEntityManagerFactory().getPersistenceUnitUtil().isLoaded(found.getCategory()))
+				.isTrue();
+		assertThat(transactionRepository.findByIdAndUserId(saved.getId(), other.getId())).isEmpty();
+	}
+
 	private CategoryEntity findSystemCategory(UserEntity user, String name) {
 		return categoryRepository.findAllByUserIdOrIsDefaultTrue(user.getId(), Sort.unsorted()).stream()
 				.filter(category -> name.equals(category.getName()))
