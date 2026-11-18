@@ -23,7 +23,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import pl.saldo.category.domain.CategoryEntity;
 import pl.saldo.category.infrastructure.CategoryRepository;
 import pl.saldo.currency.domain.ExchangeRateProvider;
+import pl.saldo.currency.domain.ExchangeRateQuote;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.currency.domain.RateSource;
 import pl.saldo.currency.domain.SupportedCurrency;
 import pl.saldo.shared.error.ResourceNotFoundException;
 import pl.saldo.transaction.api.TransactionResponse;
@@ -259,7 +261,7 @@ class UpdateTransactionUseCaseTest {
 				new BigDecimal(amount), currency, CATEGORY_ID, date, "Nowy opis", TransactionType.EXPENSE);
 	}
 
-	// Implements only fetchRate, so the real default getRate (PLN shortcut) is exercised.
+	// Implements only fetchQuote, so the real default getRate (PLN shortcut) is exercised.
 	private static final class FakeRateProvider implements ExchangeRateProvider {
 
 		private BigDecimal rate = new BigDecimal("4.3000");
@@ -269,14 +271,14 @@ class UpdateTransactionUseCaseTest {
 		private LocalDate requestedDate;
 
 		@Override
-		public BigDecimal fetchRate(SupportedCurrency currency, LocalDate date) {
+		public ExchangeRateQuote fetchQuote(SupportedCurrency currency, LocalDate date) {
 			fetchCalls++;
 			requestedCurrency = currency;
 			requestedDate = date;
 			if (failure != null) {
 				throw failure;
 			}
-			return rate;
+			return new ExchangeRateQuote(rate, date, RateSource.NBP);
 		}
 
 	}

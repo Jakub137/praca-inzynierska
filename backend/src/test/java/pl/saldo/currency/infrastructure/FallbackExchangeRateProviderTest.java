@@ -9,13 +9,16 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import pl.saldo.currency.domain.ExchangeRateQuote;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.currency.domain.RateSource;
 import pl.saldo.currency.domain.SupportedCurrency;
 
 class FallbackExchangeRateProviderTest {
 
-	private static final LocalDate DATE = LocalDate.of(2026, 11, 17);
-	private static final LocalDate OTHER_DATE = LocalDate.of(2025, 3, 3);
+	private static final LocalDate PUBLICATION_DATE = LocalDate.of(2026, 11, 17);
+	private static final LocalDate OLDER_PUBLICATION_DATE = LocalDate.of(2025, 3, 3);
+	private static final LocalDate REQUESTED_DATE = LocalDate.of(2026, 11, 20);
 	private static final BigDecimal EUR_RATE = new BigDecimal("4.4032");
 	private static final BigDecimal NEWER_EUR_RATE = new BigDecimal("4.4100");
 	private static final BigDecimal USD_RATE = new BigDecimal("3.8000");
@@ -28,51 +31,78 @@ class FallbackExchangeRateProviderTest {
 	}
 
 	@Test
+	void shouldReturnRememberedQuoteAsFallbackWithOriginalPublicationDate() {
+		provider.remember(SupportedCurrency.EUR, nbpQuote(EUR_RATE, PUBLICATION_DATE));
+
+		ExchangeRateQuote quote = provider.getQuote(SupportedCurrency.EUR, REQUESTED_DATE);
+
+		assertThat(quote.rate()).isEqualTo(EUR_RATE);
+		assertThat(quote.effectiveDate()).isEqualTo(PUBLICATION_DATE);
+		assertThat(quote.source()).isEqualTo(RateSource.FALLBACK);
+	}
+
+	@Test
 	void shouldReturnRememberedRateRegardlessOfRequestedDate() {
-		provider.remember(SupportedCurrency.EUR, DATE, EUR_RATE);
+		provider.remember(SupportedCurrency.EUR, nbpQuote(EUR_RATE, PUBLICATION_DATE));
 
-		assertThat(provider.getRate(SupportedCurrency.EUR, DATE)).isEqualTo(EUR_RATE);
-		assertThat(provider.getRate(SupportedCurrency.EUR, OTHER_DATE)).isEqualTo(EUR_RATE);
+		assertThat(provider.getRate(SupportedCurrency.EUR, PUBLICATION_DATE)).isEqualTo(EUR_RATE);
+		assertThat(provider.getRate(SupportedCurrency.EUR, OLDER_PUBLICATION_DATE)).isEqualTo(EUR_RATE);
 	}
 
 	@Test
-	void shouldReturnNewestRememberedRate() {
-		provider.remember(SupportedCurrency.EUR, OTHER_DATE, EUR_RATE);
-		provider.remember(SupportedCurrency.EUR, DATE, NEWER_EUR_RATE);
+	void shouldReturnQuoteWithNewestPublicationDate() {
+		provider.remember(SupportedCurrency.EUR, nbpQuote(EUR_RATE, OLDER_PUBLICATION_DATE));
+		provider.remember(SupportedCurrency.EUR, nbpQuote(NEWER_EUR_RATE, PUBLICATION_DATE));
 
-		assertThat(provider.getRate(SupportedCurrency.EUR, DATE)).isEqualTo(NEWER_EUR_RATE);
+		ExchangeRateQuote quote = provider.getQuote(SupportedCurrency.EUR, REQUESTED_DATE);
+
+		assertThat(quote.rate()).isEqualTo(NEWER_EUR_RATE);
+		assertThat(quote.effectiveDate()).isEqualTo(PUBLICATION_DATE);
 	}
 
 	@Test
-	void shouldKeepNewerRateWhenOlderDateIsRemembered() {
-		provider.remember(SupportedCurrency.EUR, DATE, NEWER_EUR_RATE);
-		provider.remember(SupportedCurrency.EUR, OTHER_DATE, EUR_RATE);
+	void shouldKeepNewerQuoteWhenOlderOneIsRemembered() {
+		provider.remember(SupportedCurrency.EUR, nbpQuote(NEWER_EUR_RATE, PUBLICATION_DATE));
+		provider.remember(SupportedCurrency.EUR, nbpQuote(EUR_RATE, OLDER_PUBLICATION_DATE));
 
-		assertThat(provider.getRate(SupportedCurrency.EUR, DATE)).isEqualTo(NEWER_EUR_RATE);
+		ExchangeRateQuote quote = provider.getQuote(SupportedCurrency.EUR, REQUESTED_DATE);
+
+		assertThat(quote.rate()).isEqualTo(NEWER_EUR_RATE);
+		assertThat(quote.effectiveDate()).isEqualTo(PUBLICATION_DATE);
 	}
 
 	@Test
-	void shouldKeepRatesPerCurrency() {
-		provider.remember(SupportedCurrency.EUR, DATE, EUR_RATE);
-		provider.remember(SupportedCurrency.USD, DATE, USD_RATE);
+	void shouldKeepQuotesPerCurrency() {
+		provider.remember(SupportedCurrency.EUR, nbpQuote(EUR_RATE, PUBLICATION_DATE));
+		provider.remember(SupportedCurrency.USD, nbpQuote(USD_RATE, PUBLICATION_DATE));
 
-		assertThat(provider.getRate(SupportedCurrency.EUR, DATE)).isEqualTo(EUR_RATE);
-		assertThat(provider.getRate(SupportedCurrency.USD, DATE)).isEqualTo(USD_RATE);
+		assertThat(provider.getRate(SupportedCurrency.EUR, REQUESTED_DATE)).isEqualTo(EUR_RATE);
+		assertThat(provider.getRate(SupportedCurrency.USD, REQUESTED_DATE)).isEqualTo(USD_RATE);
 	}
 
 	@Test
 	void shouldThrowWhenNothingRememberedForCurrency() {
-		provider.remember(SupportedCurrency.EUR, DATE, EUR_RATE);
+		provider.remember(SupportedCurrency.EUR, nbpQuote(EUR_RATE, PUBLICATION_DATE));
 
-		assertThatThrownBy(() -> provider.getRate(SupportedCurrency.USD, DATE))
+		assertThatThrownBy(() -> provider.getQuote(SupportedCurrency.USD, REQUESTED_DATE))
 				.isInstanceOf(ExchangeRateUnavailableException.class)
 				.hasMessageContaining("USD");
 	}
 
 	@Test
-	void shouldRejectNullRate() {
-		assertThatThrownBy(() -> provider.remember(SupportedCurrency.EUR, DATE, null))
+	void shouldRejectNullQuote() {
+		assertThatThrownBy(() -> provider.remember(SupportedCurrency.EUR, null))
 				.isInstanceOf(NullPointerException.class);
+	}
+
+	@Test
+	void shouldRejectNullCurrency() {
+		assertThatThrownBy(() -> provider.remember(null, nbpQuote(EUR_RATE, PUBLICATION_DATE)))
+				.isInstanceOf(NullPointerException.class);
+	}
+
+	private static ExchangeRateQuote nbpQuote(BigDecimal rate, LocalDate publicationDate) {
+		return new ExchangeRateQuote(rate, publicationDate, RateSource.NBP);
 	}
 
 }
