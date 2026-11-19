@@ -13,7 +13,7 @@ type FormInputProps = Omit<
   "type" | "id" | "className" | "aria-invalid" | "aria-describedby"
 > & {
   label: string;
-  type?: "text" | "email" | "password";
+  type?: "text" | "email" | "password" | "date";
   error?: string;
   hint?: string;
 };

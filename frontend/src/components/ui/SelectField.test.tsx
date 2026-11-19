@@ -40,4 +40,75 @@ describe("SelectField", () => {
       "border-input-border",
     );
   });
+
+  it("shows the error and links it to the select", () => {
+    render(
+      <SelectField
+        id="kind"
+        label="Typ"
+        value="a"
+        onChange={vi.fn()}
+        error="Wybierz kategorię."
+      >
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    const select = screen.getByRole("combobox");
+    const alert = screen.getByRole("alert");
+
+    expect(alert.textContent).toBe("Wybierz kategorię.");
+    expect(select.getAttribute("aria-invalid")).toBe("true");
+    expect(select.getAttribute("aria-describedby")).toBe(alert.id);
+    expect(select.className).toContain("border-danger");
+  });
+
+  it("sets no error attributes for an empty error text", () => {
+    render(
+      <SelectField id="kind" label="Typ" value="a" onChange={vi.fn()} error="">
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    const select = screen.getByRole("combobox");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(select.getAttribute("aria-invalid")).toBeNull();
+    expect(select.getAttribute("aria-describedby")).toBeNull();
+  });
+
+  it("keeps the fixed filter width unless fullWidth is set", () => {
+    const { unmount } = render(
+      <SelectField id="kind" label="Typ" value="a" onChange={vi.fn()}>
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    expect(screen.getByRole("combobox").parentElement?.className).toContain(
+      "sm:w-56",
+    );
+
+    unmount();
+    render(
+      <SelectField id="kind" label="Typ" value="a" onChange={vi.fn()} fullWidth>
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    expect(screen.getByRole("combobox").parentElement?.className).not.toContain(
+      "sm:w-56",
+    );
+  });
+
+  it("disables the select", () => {
+    render(
+      <SelectField id="kind" label="Typ" value="a" onChange={vi.fn()} disabled>
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    expect((screen.getByRole("combobox") as HTMLSelectElement).disabled).toBe(
+      true,
+    );
+  });
 });

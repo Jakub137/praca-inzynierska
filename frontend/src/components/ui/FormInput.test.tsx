@@ -33,6 +33,12 @@ describe("FormInput", () => {
     expect(typeOf(screen.getByLabelText("Adres e-mail"))).toBe("email");
   });
 
+  it("renders a date input when asked", () => {
+    render(<FormInput label="Data" type="date" />);
+
+    expect(typeOf(screen.getByLabelText("Data"))).toBe("date");
+  });
+
   it("sets no ARIA error attributes and no alert without an error", () => {
     render(<FormInput label="Imię" />);
 

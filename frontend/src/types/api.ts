@@ -106,3 +106,15 @@ export type CategoryResponse = {
   readonly type: TransactionType;
   readonly isDefault: boolean;
 };
+
+// Request body of POST /api/v1/transactions (CreateTransactionCommand).
+export type CreateTransactionRequest = {
+  // At most 10 integer and 2 fraction digits, so the JSON number keeps the exact decimal value.
+  readonly amount: number;
+  readonly currency: SupportedCurrency;
+  readonly categoryId: number;
+  // Calendar date "RRRR-MM-DD".
+  readonly date: string;
+  readonly description: string;
+  readonly type: TransactionType;
+};

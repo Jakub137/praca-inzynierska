@@ -78,14 +78,16 @@ describe("TransactionsView", () => {
     expect(screen.getByLabelText("Okres")).toBeTruthy();
   });
 
-  it("renders the empty state without a button when there are no transactions", () => {
+  it("renders the empty state with the add button as its only button", () => {
     renderWithState({ status: "ready", page: makePage([]) });
 
     expect(
       screen.getByRole("heading", { name: "Brak transakcji" }),
     ).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual(["+ Dodaj wydatek"]);
   });
 
   it("renders the plain empty state for an empty account even on a later page", () => {
@@ -161,5 +163,20 @@ describe("TransactionsView", () => {
     expect(
       screen.queryByRole("heading", { name: "Brak transakcji" }),
     ).toBeNull();
+  });
+
+  it("shows the add button above the filters in every state", () => {
+    const { unmount } = renderWithState({ status: "loading" });
+
+    expect(
+      screen.getByRole("button", { name: "+ Dodaj wydatek" }),
+    ).toBeTruthy();
+
+    unmount();
+    renderWithState({ status: "error" });
+
+    expect(
+      screen.getByRole("button", { name: "+ Dodaj wydatek" }),
+    ).toBeTruthy();
   });
 });

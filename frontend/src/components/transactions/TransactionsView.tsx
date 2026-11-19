@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { type MouseEvent, useRef, useState } from "react";
 import { TransferIcon } from "@/components/icons/TransferIcon";
+import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { TransactionsFilters } from "@/components/transactions/TransactionsFilters";
 import { TransactionsPagination } from "@/components/transactions/TransactionsPagination";
 import { TransactionsSkeleton } from "@/components/transactions/TransactionsSkeleton";
@@ -21,8 +23,13 @@ import {
   type TransactionFilters,
 } from "@/lib/transactions/filters";
 import type { MonthOption } from "@/lib/transactions/months";
+import {
+  createEmptyFormValues,
+  toLocalIsoDate,
+  type TransactionFormValues,
+} from "@/lib/transactions/transactionForm";
 
-const PRIMARY_LINK = `inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline ${FOCUS_RING}`;
+const PRIMARY_ACTION = `inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline ${FOCUS_RING}`;
 
 type TransactionsViewProps = {
   filters: TransactionFilters;
@@ -76,7 +83,7 @@ function NoResults({ filters, isPageOutOfRange }: NoResultsProps) {
       title={content.title}
       description={content.description}
       actionButton={
-        <Link href={content.href} className={PRIMARY_LINK}>
+        <Link href={content.href} className={PRIMARY_ACTION}>
           {content.label}
         </Link>
       }
@@ -129,14 +136,35 @@ export function TransactionsView({
   monthOptions,
 }: TransactionsViewProps) {
   const { state, retry } = useTransactions(filters);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const [draft, setDraft] = useState<TransactionFormValues | null>(null);
+
+  // The date is read here, not while rendering, so that a render stays pure.
+  function openDialog(event: MouseEvent<HTMLButtonElement>) {
+    openerRef.current = event.currentTarget;
+    setDraft(createEmptyFormValues(toLocalIsoDate(new Date())));
+  }
 
   if (state.status === "idle") {
     return null;
   }
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <button type="button" onClick={openDialog} className={PRIMARY_ACTION}>
+          + Dodaj wydatek
+        </button>
+      </div>
       <TransactionsFilters filters={filters} monthOptions={monthOptions} />
       <TransactionsResults state={state} filters={filters} onRetry={retry} />
+      {draft !== null && (
+        <TransactionDialog
+          mode="create"
+          initialValues={draft}
+          returnFocusRef={openerRef}
+          onClose={() => setDraft(null)}
+        />
+      )}
     </div>
   );
 }
