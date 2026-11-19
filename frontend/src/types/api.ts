@@ -54,3 +54,17 @@ export type AuthResponse = {
   readonly expiresIn: number;
   readonly user: AuthUserResponse;
 };
+
+export type RateSource = "NBP" | "FALLBACK";
+
+export type CurrencyRateResponse = {
+  readonly currency: Exclude<SupportedCurrency, "PLN">;
+  // Display only: never use this number in calculations.
+  readonly rate: number;
+  readonly effectiveDate: string;
+  readonly source: RateSource;
+};
+
+export type CurrencyRatesResponse = {
+  readonly rates: readonly CurrencyRateResponse[];
+};

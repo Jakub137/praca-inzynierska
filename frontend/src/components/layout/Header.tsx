@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { CurrencyPill } from "@/components/currency/CurrencyPill";
 import { MenuIcon } from "@/components/icons/MenuIcon";
 import { FOCUS_RING } from "@/lib/focusRing";
 
@@ -29,6 +30,9 @@ export function Header({
         <MenuIcon className="size-6" />
       </button>
       <span className="text-lg font-semibold text-ink lg:hidden">Saldo</span>
+      <div className="ml-auto">
+        <CurrencyPill />
+      </div>
     </header>
   );
 }
