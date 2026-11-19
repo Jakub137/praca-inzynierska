@@ -1,17 +1,16 @@
 import { CategoryIcon } from "@/components/icons/CategoryIcon";
 import { TransactionAmount } from "@/components/transactions/TransactionAmount";
+import { TransactionRowActions } from "@/components/transactions/TransactionRowActions";
 import { formatIsoDate } from "@/lib/format/date";
+import { getTransactionTitle } from "@/lib/format/transactionTitle";
 import type { TransactionResponse } from "@/types/api";
-
-const NO_DESCRIPTION = "Bez opisu";
 
 type TransactionRowProps = {
   transaction: TransactionResponse;
 };
 
-// The last cell stays empty: T-045 renders the edit and delete buttons in it.
 export function TransactionRow({ transaction }: TransactionRowProps) {
-  const title = transaction.description ?? NO_DESCRIPTION;
+  const title = getTransactionTitle(transaction);
 
   return (
     <tr className="border-t border-line">
@@ -37,7 +36,9 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
       <td className="whitespace-nowrap px-4 py-3 text-right">
         <TransactionAmount transaction={transaction} />
       </td>
-      <td className="px-4 py-3 text-right" />
+      <td className="px-4 py-1 text-right">
+        <TransactionRowActions transaction={transaction} />
+      </td>
     </tr>
   );
 }
