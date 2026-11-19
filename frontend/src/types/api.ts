@@ -97,3 +97,12 @@ export type PageResponse<T> = {
   readonly totalElements: number;
   readonly totalPages: number;
 };
+
+export type CategoryResponse = {
+  readonly id: number;
+  readonly name: string;
+  // Null for categories created by the user.
+  readonly icon: string | null;
+  readonly type: TransactionType;
+  readonly isDefault: boolean;
+};

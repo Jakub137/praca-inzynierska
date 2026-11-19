@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useTransactions } from "@/hooks/useTransactions";
 import type { TransactionsPageParams } from "@/lib/api/transactions";
 import { AuthContext, type AuthStatus } from "@/lib/auth/authContext";
+import {
+  DEFAULT_TRANSACTION_FILTERS,
+  type TransactionFilters,
+} from "@/lib/transactions/filters";
 import { makeAuthValue } from "@/test-utils/authContextValue";
 import { makePage, TEST_TRANSACTIONS } from "@/test-utils/transactions";
 import type { PageResponse, TransactionResponse } from "@/types/api";
@@ -29,7 +33,10 @@ vi.mock("@/lib/auth/session", () => ({
 
 const TEST_PAGE = makePage(TEST_TRANSACTIONS);
 
-function renderTransactionsHook(status: AuthStatus) {
+function renderTransactionsHook(
+  status: AuthStatus,
+  filters: TransactionFilters = DEFAULT_TRANSACTION_FILTERS,
+) {
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <AuthContext.Provider value={makeAuthValue({ status })}>
@@ -37,7 +44,10 @@ function renderTransactionsHook(status: AuthStatus) {
       </AuthContext.Provider>
     );
   }
-  return renderHook(() => useTransactions(), { wrapper });
+  return renderHook(
+    (props: { filters: TransactionFilters }) => useTransactions(props.filters),
+    { wrapper, initialProps: { filters } },
+  );
 }
 
 describe("useTransactions", () => {
@@ -61,6 +71,25 @@ describe("useTransactions", () => {
     expect(getTransactionsMock).toHaveBeenCalledWith("abc", {
       page: 0,
       size: 15,
+    });
+  });
+
+  it("maps the filters to API parameters, counting pages from zero", async () => {
+    renderTransactionsHook("authenticated", {
+      page: 3,
+      month: "2026-02",
+      type: "EXPENSE",
+      categoryId: 7,
+    });
+
+    await waitFor(() => expect(getTransactionsMock).toHaveBeenCalledTimes(1));
+    expect(getTransactionsMock).toHaveBeenCalledWith("abc", {
+      page: 2,
+      size: 15,
+      categoryId: 7,
+      type: "EXPENSE",
+      dateFrom: "2026-02-01",
+      dateTo: "2026-02-28",
     });
   });
 
@@ -104,6 +133,32 @@ describe("useTransactions", () => {
       }),
     );
     expect(getTransactionsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the skeleton and fetches again when the filters change", async () => {
+    const { result, rerender } = renderTransactionsHook("authenticated");
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+
+    rerender({ filters: { ...DEFAULT_TRANSACTION_FILTERS, type: "INCOME" } });
+
+    expect(result.current.state).toEqual({ status: "loading" });
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+    expect(getTransactionsMock).toHaveBeenCalledTimes(2);
+    expect(getTransactionsMock).toHaveBeenLastCalledWith("abc", {
+      page: 0,
+      size: 15,
+      type: "INCOME",
+    });
+  });
+
+  it("does not fetch again for a new filters object with the same values", async () => {
+    const { result, rerender } = renderTransactionsHook("authenticated");
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+
+    rerender({ filters: { ...DEFAULT_TRANSACTION_FILTERS } });
+
+    expect(result.current.state.status).toBe("ready");
+    expect(getTransactionsMock).toHaveBeenCalledTimes(1);
   });
 
   it.each<AuthStatus>(["loading", "unauthenticated", "error"])(
