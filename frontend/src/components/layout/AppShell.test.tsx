@@ -2,12 +2,21 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps, MouseEvent } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { AppShell } from "@/components/layout/AppShell";
+import type { CurrencyRatesState } from "@/hooks/useCurrencyRates";
 import { AuthContext } from "@/lib/auth/authContext";
 import { makeAuthValue } from "@/test-utils/authContextValue";
+import { TEST_RATES } from "@/test-utils/currencyRates";
 
 const usePathnameMock = vi.hoisted(() => vi.fn<() => string>());
+const useCurrencyRatesMock = vi.hoisted(() =>
+  vi.fn<() => CurrencyRatesState>(),
+);
 
 vi.mock("next/navigation", () => ({ usePathname: usePathnameMock }));
+
+vi.mock("@/hooks/useCurrencyRates", () => ({
+  useCurrencyRates: useCurrencyRatesMock,
+}));
 
 vi.mock("next/link", async () => {
   const { createElement } = await import("react");
@@ -30,6 +39,7 @@ vi.mock("next/link", async () => {
 
 function renderShell() {
   usePathnameMock.mockReturnValue("/dashboard");
+  useCurrencyRatesMock.mockReturnValue({ status: "ready", rates: TEST_RATES });
   render(
     <AuthContext.Provider value={makeAuthValue()}>
       <AppShell>
@@ -143,5 +153,19 @@ describe("AppShell", () => {
     fireEvent.click(within(drawer()).getByRole("link", { name: "Transakcje" }));
 
     expect(drawer().hidden).toBe(true);
+  });
+
+  it("renders the currency pill in the header after the menu button", () => {
+    renderShell();
+    const menuButton = screen.getByRole("button", { name: "Otwórz menu" });
+    const pill = within(screen.getByRole("banner")).getByRole("button", {
+      name: /^NBP: 1 EUR/,
+    });
+
+    expect(
+      menuButton.compareDocumentPosition(pill) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(pill.closest(".ml-auto")).not.toBeNull();
   });
 });
