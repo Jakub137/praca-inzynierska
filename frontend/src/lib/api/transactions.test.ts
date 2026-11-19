@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/errors";
-import { createTransaction, getTransactions } from "@/lib/api/transactions";
+import {
+  createTransaction,
+  deleteTransaction,
+  getTransactions,
+} from "@/lib/api/transactions";
 import {
   EXPENSE_PLN,
   makePage,
@@ -135,6 +139,50 @@ describe("transactions API", () => {
       expect(error).toMatchObject({
         status: 503,
         problem: { detail: "Nie udało się pobrać kursu waluty." },
+      });
+    });
+  });
+
+  describe("deleteTransaction", () => {
+    it("sends DELETE to the transaction address with the Bearer token and resolves without a body", async () => {
+      fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+      const result = await deleteTransaction("abc", EXPENSE_PLN.id);
+
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/transactions/${EXPENSE_PLN.id}`);
+      expect(init?.method).toBe("DELETE");
+      expect(init?.headers).toEqual({
+        Accept: "application/json",
+        Authorization: "Bearer abc",
+      });
+      expect(init?.body).toBeUndefined();
+      expect(result).toBeUndefined();
+    });
+
+    it("rejects with an ApiError that carries the detail when the transaction is not found", async () => {
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            status: 404,
+            detail: "Nie znaleziono zasobu.",
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        ),
+      );
+
+      const error: unknown = await deleteTransaction(
+        "abc",
+        EXPENSE_PLN.id,
+      ).catch((rejection: unknown) => rejection);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({
+        status: 404,
+        problem: { detail: "Nie znaleziono zasobu." },
       });
     });
   });

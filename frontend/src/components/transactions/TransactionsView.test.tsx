@@ -39,6 +39,12 @@ const createTransactionMock = vi.hoisted(() =>
   >(),
 );
 const showToastMock = vi.hoisted(() => vi.fn<(message: string) => void>());
+const deleteTransactionMock = vi.hoisted(() =>
+  vi.fn<(token: string, id: string) => Promise<void>>(),
+);
+const replaceMock = vi.hoisted(() =>
+  vi.fn<(href: string, options?: { scroll: boolean }) => void>(),
+);
 
 vi.mock("@/hooks/useTransactions", () => ({
   useTransactions: useTransactionsMock,
@@ -54,12 +60,13 @@ vi.mock("@/hooks/useToast", () => ({
 }));
 vi.mock("@/lib/api/transactions", () => ({
   createTransaction: createTransactionMock,
+  deleteTransaction: deleteTransactionMock,
 }));
 vi.mock("@/lib/auth/session", () => ({
   readSessionToken: () => "token",
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: replaceMock }),
 }));
 
 const retryMock = vi.fn();
@@ -105,6 +112,8 @@ describe("TransactionsView", () => {
     useTransactionsMock.mockReset();
     createTransactionMock.mockReset();
     showToastMock.mockReset();
+    deleteTransactionMock.mockReset();
+    replaceMock.mockReset();
     useCategoriesMock.mockReturnValue({
       status: "ready",
       categories: TEST_CATEGORIES,
@@ -300,5 +309,147 @@ describe("TransactionsView", () => {
     expect(createTransactionMock).not.toHaveBeenCalled();
     expect(retryMock).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  describe("deleting a transaction", () => {
+    const DELETE_BUTTON_NAME =
+      "Usuń transakcję: Zakupy w Biedronce, 17.11.2026";
+
+    function renderList(
+      filters: TransactionFilters = DEFAULT_TRANSACTION_FILTERS,
+      page = makePage(TEST_TRANSACTIONS),
+    ) {
+      renderWithState({ status: "ready", page }, filters);
+    }
+
+    function openDeleteDialog(): HTMLElement {
+      const trash = screen.getByRole("button", { name: DELETE_BUTTON_NAME });
+      fireEvent.click(trash);
+      return trash;
+    }
+
+    async function confirmDelete() {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Usuń" }));
+      });
+    }
+
+    it("opens the confirmation from the trash button without sending anything", () => {
+      renderList();
+
+      openDeleteDialog();
+
+      const dialog = screen.getByRole("dialog", { name: "Usuń transakcję" });
+      expect(
+        within(dialog).getByText("Czy na pewno chcesz usunąć tę transakcję?"),
+      ).toBeTruthy();
+      expect(
+        within(dialog).getByText("Zakupy w Biedronce, 17.11.2026"),
+      ).toBeTruthy();
+      expect(deleteTransactionMock).not.toHaveBeenCalled();
+    });
+
+    it("deletes, closes the dialog, reloads the list, shows the toast and focuses the add button", async () => {
+      deleteTransactionMock.mockResolvedValue(undefined);
+      renderList();
+      openDeleteDialog();
+
+      await confirmDelete();
+
+      expect(deleteTransactionMock).toHaveBeenCalledWith(
+        "token",
+        EXPENSE_PLN.id,
+      );
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(retryMock).toHaveBeenCalledTimes(1);
+      expect(replaceMock).not.toHaveBeenCalled();
+      expect(showToastMock).toHaveBeenCalledWith("Transakcja została usunięta");
+      const [retryOrder = 0] = retryMock.mock.invocationCallOrder;
+      const [toastOrder = 0] = showToastMock.mock.invocationCallOrder;
+      expect(retryOrder).toBeGreaterThan(0);
+      expect(retryOrder).toBeLessThan(toastOrder);
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "+ Dodaj wydatek" }),
+      );
+    });
+
+    it("sends nothing and returns the focus to the trash button on Anuluj", () => {
+      renderList();
+      const trash = openDeleteDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
+
+      expect(deleteTransactionMock).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(retryMock).not.toHaveBeenCalled();
+      expect(showToastMock).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(trash);
+    });
+
+    it("keeps the dialog open and shows the detail when deleting fails", async () => {
+      deleteTransactionMock.mockRejectedValue(
+        new ApiError(404, { status: 404, detail: "Nie znaleziono zasobu." }),
+      );
+      renderList();
+      openDeleteDialog();
+
+      await confirmDelete();
+
+      expect(screen.getByRole("alert").textContent).toContain(
+        "Nie znaleziono zasobu.",
+      );
+      expect(screen.getByRole("dialog")).toBeTruthy();
+      expect(retryMock).not.toHaveBeenCalled();
+      expect(replaceMock).not.toHaveBeenCalled();
+      expect(showToastMock).not.toHaveBeenCalled();
+    });
+
+    it("goes back one page and keeps the filters when the only row of a later page was deleted", async () => {
+      deleteTransactionMock.mockResolvedValue(undefined);
+      renderList(
+        { page: 3, month: null, type: "EXPENSE", categoryId: null },
+        makePage([EXPENSE_PLN], { page: 2, totalElements: 31, totalPages: 3 }),
+      );
+      openDeleteDialog();
+
+      await confirmDelete();
+
+      expect(replaceMock).toHaveBeenCalledTimes(1);
+      expect(replaceMock).toHaveBeenCalledWith(
+        "/transactions?type=EXPENSE&page=2",
+        { scroll: false },
+      );
+      expect(retryMock).not.toHaveBeenCalled();
+      expect(showToastMock).toHaveBeenCalledWith("Transakcja została usunięta");
+    });
+
+    it("only reloads when a later page still has other rows", async () => {
+      deleteTransactionMock.mockResolvedValue(undefined);
+      renderList(
+        { ...DEFAULT_TRANSACTION_FILTERS, page: 2 },
+        makePage(TEST_TRANSACTIONS, {
+          page: 1,
+          totalElements: 18,
+          totalPages: 2,
+        }),
+      );
+      openDeleteDialog();
+
+      await confirmDelete();
+
+      expect(retryMock).toHaveBeenCalledTimes(1);
+      expect(replaceMock).not.toHaveBeenCalled();
+    });
+
+    it("only reloads when the only row of the first page was deleted", async () => {
+      deleteTransactionMock.mockResolvedValue(undefined);
+      renderList(DEFAULT_TRANSACTION_FILTERS, makePage([EXPENSE_PLN]));
+      openDeleteDialog();
+
+      await confirmDelete();
+
+      expect(retryMock).toHaveBeenCalledTimes(1);
+      expect(replaceMock).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,7 +1,11 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { TransactionsTable } from "@/components/transactions/TransactionsTable";
-import { EXPENSE_PLN, TEST_TRANSACTIONS } from "@/test-utils/transactions";
+import {
+  EXPENSE_PLN,
+  INCOME_PLN,
+  TEST_TRANSACTIONS,
+} from "@/test-utils/transactions";
 
 function renderTable(transactions = TEST_TRANSACTIONS) {
   return render(<TransactionsTable transactions={transactions} />);
@@ -107,5 +111,23 @@ describe("TransactionsTable", () => {
     expect(screen.getAllByRole("button")).toHaveLength(
       TEST_TRANSACTIONS.length * 2,
     );
+  });
+
+  it("passes the delete handler to the buttons of the clicked row", () => {
+    const onDelete = vi.fn();
+    render(
+      <TransactionsTable
+        transactions={TEST_TRANSACTIONS}
+        onDelete={onDelete}
+      />,
+    );
+    const button = screen.getByRole("button", {
+      name: "Usuń transakcję: Wynagrodzenie za listopad, 10.11.2026",
+    });
+
+    fireEvent.click(button);
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledWith(INCOME_PLN, button);
   });
 });
