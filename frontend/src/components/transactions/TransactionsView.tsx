@@ -10,6 +10,7 @@ import { TransactionsSkeleton } from "@/components/transactions/TransactionsSkel
 import { TransactionsTable } from "@/components/transactions/TransactionsTable";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useCreateTransaction } from "@/hooks/useCreateTransaction";
 import {
   type TransactionsState,
   useTransactions,
@@ -138,6 +139,13 @@ export function TransactionsView({
   const { state, retry } = useTransactions(filters);
   const openerRef = useRef<HTMLElement | null>(null);
   const [draft, setDraft] = useState<TransactionFormValues | null>(null);
+  // Order matters: close the dialog, reload the list (filters and page stay), then the hook shows the toast.
+  const submitTransaction = useCreateTransaction({
+    onCreated: () => {
+      setDraft(null);
+      retry();
+    },
+  });
 
   // The date is read here, not while rendering, so that a render stays pure.
   function openDialog(event: MouseEvent<HTMLButtonElement>) {
@@ -163,6 +171,7 @@ export function TransactionsView({
           initialValues={draft}
           returnFocusRef={openerRef}
           onClose={() => setDraft(null)}
+          onSubmit={submitTransaction}
         />
       )}
     </div>

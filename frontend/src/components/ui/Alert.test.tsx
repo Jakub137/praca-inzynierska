@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { describe, expect, it } from "vitest";
 import { Alert } from "@/components/ui/Alert";
 
@@ -25,5 +26,25 @@ describe("Alert", () => {
     render(<Alert variant="error">Błąd</Alert>);
 
     expect(screen.getAllByText("Błąd")).toHaveLength(1);
+  });
+
+  it("is not focusable without a ref", () => {
+    render(<Alert variant="error">Błąd</Alert>);
+
+    expect(screen.getByRole("alert").getAttribute("tabindex")).toBeNull();
+  });
+
+  it("can take the focus from the parent when it gets a ref", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <Alert variant="error" ref={ref}>
+        Błąd
+      </Alert>,
+    );
+
+    ref.current?.focus();
+
+    expect(screen.getByRole("alert").getAttribute("tabindex")).toBe("-1");
+    expect(document.activeElement).toBe(screen.getByRole("alert"));
   });
 });

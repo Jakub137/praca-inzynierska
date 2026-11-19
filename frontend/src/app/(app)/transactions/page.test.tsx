@@ -10,21 +10,32 @@ import {
 } from "vitest";
 import TransactionsPage, { metadata } from "@/app/(app)/transactions/page";
 import type { CategoriesState } from "@/hooks/useCategories";
+import type { CurrencyRatesState } from "@/hooks/useCurrencyRates";
 import type { UseTransactionsResult } from "@/hooks/useTransactions";
 import type { TransactionFilters } from "@/lib/transactions/filters";
 import { TEST_CATEGORIES } from "@/test-utils/categories";
+import { TEST_RATES } from "@/test-utils/currencyRates";
 import { installDialogStub } from "@/test-utils/dialog";
 
 const useTransactionsMock = vi.hoisted(() =>
   vi.fn<(filters: TransactionFilters) => UseTransactionsResult>(),
 );
 const useCategoriesMock = vi.hoisted(() => vi.fn<() => CategoriesState>());
+const useCurrencyRatesMock = vi.hoisted(() =>
+  vi.fn<() => CurrencyRatesState>(),
+);
 
 vi.mock("@/hooks/useTransactions", () => ({
   useTransactions: useTransactionsMock,
 }));
 vi.mock("@/hooks/useCategories", () => ({
   useCategories: useCategoriesMock,
+}));
+vi.mock("@/hooks/useCurrencyRates", () => ({
+  useCurrencyRates: useCurrencyRatesMock,
+}));
+vi.mock("@/hooks/useToast", () => ({
+  useToast: () => ({ showToast: vi.fn() }),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -50,6 +61,10 @@ describe("TransactionsPage", () => {
     useCategoriesMock.mockReturnValue({
       status: "ready",
       categories: TEST_CATEGORIES,
+    });
+    useCurrencyRatesMock.mockReturnValue({
+      status: "ready",
+      rates: TEST_RATES,
     });
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 10, 19));

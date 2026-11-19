@@ -3,6 +3,7 @@ import {
   AMOUNT_INPUT_MAX_LENGTH,
   createEmptyFormValues,
   getSelectedType,
+  parseAmountOrNull,
   parseCurrency,
   parseTransactionForm,
   toLocalIsoDate,
@@ -203,4 +204,21 @@ describe("parseTransactionForm", () => {
       "date",
     ]);
   });
+});
+
+describe("parseAmountOrNull", () => {
+  it.each([
+    ["184,50", 184.5],
+    ["184.5", 184.5],
+    [" 10 ", 10],
+  ])("returns the number for %s", (raw, expected) => {
+    expect(parseAmountOrNull(raw)).toBe(expected);
+  });
+
+  it.each(["", "abc", "0", "0,00", "1,234", "12345678901"])(
+    "returns null for %s",
+    (raw) => {
+      expect(parseAmountOrNull(raw)).toBeNull();
+    },
+  );
 });

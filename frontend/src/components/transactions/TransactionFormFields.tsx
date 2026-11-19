@@ -4,18 +4,17 @@ import { useId } from "react";
 import { FormInput } from "@/components/ui/FormInput";
 import { SelectField } from "@/components/ui/SelectField";
 import type { TransactionFormState } from "@/hooks/useTransactionForm";
+import { buildAmountHint } from "@/lib/transactions/nbpNotice";
 import {
   AMOUNT_INPUT_MAX_LENGTH,
   CURRENCY_OPTIONS,
   DESCRIPTION_MAX_LENGTH,
   parseCurrency,
 } from "@/lib/transactions/transactionForm";
-import type { CategoryResponse } from "@/types/api";
+import type { CategoryResponse, CurrencyRateResponse } from "@/types/api";
 
 export type CategoriesStatus = "loading" | "ready" | "error";
 
-const BASE_CURRENCY = "PLN";
-const NBP_HINT = "Przeliczenie po bieżącym kursie NBP dla walut obcych";
 const CATEGORIES_ERROR =
   "Nie udało się wczytać kategorii. Zamknij okno i spróbuj ponownie.";
 
@@ -23,6 +22,8 @@ type TransactionFormFieldsProps = {
   form: TransactionFormState;
   categories: readonly CategoryResponse[];
   categoriesStatus: CategoriesStatus;
+  // Empty while the rates load or when the request failed.
+  rates: readonly CurrencyRateResponse[];
 };
 
 type CategoryGroupProps = {
@@ -89,6 +90,7 @@ export function TransactionFormFields({
   form,
   categories,
   categoriesStatus,
+  rates,
 }: TransactionFormFieldsProps) {
   const idPrefix = useId();
   const { values, errors, refs, setField } = form;
@@ -115,7 +117,7 @@ export function TransactionFormFields({
           maxLength={AMOUNT_INPUT_MAX_LENGTH}
           value={values.amount}
           onChange={(event) => setField("amount", event.target.value)}
-          hint={values.currency === BASE_CURRENCY ? undefined : NBP_HINT}
+          hint={buildAmountHint(values.amount, values.currency, rates)}
           error={errors.amount}
         />
         <SelectField

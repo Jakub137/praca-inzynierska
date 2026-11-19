@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api/client";
 import type {
+  CreateTransactionRequest,
   PageResponse,
   TransactionResponse,
   TransactionType,
@@ -44,4 +45,16 @@ export function getTransactions(
     `/transactions?${query.toString()}`,
     { token },
   );
+}
+
+// POST answers 201 with the saved transaction; the backend calculates the rate and the PLN amount.
+export function createTransaction(
+  token: string,
+  request: CreateTransactionRequest,
+): Promise<TransactionResponse> {
+  return apiRequest<TransactionResponse>("/transactions", {
+    method: "POST",
+    body: request,
+    token,
+  });
 }
