@@ -1,10 +1,19 @@
-import { render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import TransactionsPage, { metadata } from "@/app/(app)/transactions/page";
 import type { CategoriesState } from "@/hooks/useCategories";
 import type { UseTransactionsResult } from "@/hooks/useTransactions";
 import type { TransactionFilters } from "@/lib/transactions/filters";
 import { TEST_CATEGORIES } from "@/test-utils/categories";
+import { installDialogStub } from "@/test-utils/dialog";
 
 const useTransactionsMock = vi.hoisted(() =>
   vi.fn<(filters: TransactionFilters) => UseTransactionsResult>(),
@@ -30,6 +39,8 @@ async function renderPage(
 }
 
 describe("TransactionsPage", () => {
+  beforeAll(installDialogStub);
+
   beforeEach(() => {
     useTransactionsMock.mockReset();
     useTransactionsMock.mockReturnValue({
@@ -115,5 +126,24 @@ describe("TransactionsPage", () => {
     expect(useTransactionsMock).toHaveBeenCalledWith(
       expect.objectContaining({ month: null }),
     );
+  });
+
+  it("opens the new transaction dialog from the add button and returns the focus on close", async () => {
+    await renderPage();
+    const addButton = screen.getByRole("button", { name: "+ Dodaj wydatek" });
+
+    fireEvent.click(addButton);
+
+    expect(
+      screen.getByRole("dialog", { name: "Dodaj nową transakcję" }),
+    ).toBeTruthy();
+    expect(
+      (screen.getByLabelText("Data transakcji *") as HTMLInputElement).value,
+    ).toBe("2026-11-19");
+
+    fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
+
+    expect(screen.queryByRole("dialog", { hidden: true })).toBeNull();
+    expect(document.activeElement).toBe(addButton);
   });
 });
