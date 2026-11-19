@@ -68,3 +68,32 @@ export type CurrencyRateResponse = {
 export type CurrencyRatesResponse = {
   readonly rates: readonly CurrencyRateResponse[];
 };
+
+export type TransactionType = "INCOME" | "EXPENSE";
+
+export type TransactionResponse = {
+  readonly id: string;
+  // Display only: amounts are calculated by the backend (BigDecimal), never here.
+  readonly amount: number;
+  readonly currency: SupportedCurrency;
+  readonly exchangeRate: number;
+  readonly amountPln: number;
+  // Calendar date without a time zone, e.g. "2026-11-17".
+  readonly date: string;
+  readonly description: string | null;
+  readonly type: TransactionType;
+  readonly categoryId: number;
+  readonly categoryName: string;
+  readonly categoryIcon: string | null;
+  readonly recurring: boolean;
+  readonly createdAt: string;
+};
+
+export type PageResponse<T> = {
+  readonly content: readonly T[];
+  // Zero-based page index.
+  readonly page: number;
+  readonly size: number;
+  readonly totalElements: number;
+  readonly totalPages: number;
+};
