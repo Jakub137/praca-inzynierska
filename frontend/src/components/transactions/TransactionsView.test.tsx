@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  type RenderResult,
+  screen,
+  within,
+} from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransactionsView } from "@/components/transactions/TransactionsView";
 import type { CategoriesState } from "@/hooks/useCategories";
@@ -14,6 +21,7 @@ import { TEST_RATES } from "@/test-utils/currencyRates";
 import { installDialogStub } from "@/test-utils/dialog";
 import {
   EXPENSE_PLN,
+  INCOME_PLN,
   makePage,
   TEST_MONTH_OPTIONS,
   TEST_TRANSACTIONS,
@@ -21,6 +29,7 @@ import {
 import type {
   CreateTransactionRequest,
   TransactionResponse,
+  UpdateTransactionRequest,
 } from "@/types/api";
 
 const useTransactionsMock = vi.hoisted(() =>
@@ -35,6 +44,15 @@ const createTransactionMock = vi.hoisted(() =>
     (
       token: string,
       request: CreateTransactionRequest,
+    ) => Promise<TransactionResponse>
+  >(),
+);
+const updateTransactionMock = vi.hoisted(() =>
+  vi.fn<
+    (
+      token: string,
+      id: string,
+      request: UpdateTransactionRequest,
     ) => Promise<TransactionResponse>
   >(),
 );
@@ -60,6 +78,7 @@ vi.mock("@/hooks/useToast", () => ({
 }));
 vi.mock("@/lib/api/transactions", () => ({
   createTransaction: createTransactionMock,
+  updateTransaction: updateTransactionMock,
   deleteTransaction: deleteTransactionMock,
 }));
 vi.mock("@/lib/auth/session", () => ({
@@ -111,6 +130,7 @@ describe("TransactionsView", () => {
     retryMock.mockReset();
     useTransactionsMock.mockReset();
     createTransactionMock.mockReset();
+    updateTransactionMock.mockReset();
     showToastMock.mockReset();
     deleteTransactionMock.mockReset();
     replaceMock.mockReset();
@@ -450,6 +470,211 @@ describe("TransactionsView", () => {
 
       expect(retryMock).toHaveBeenCalledTimes(1);
       expect(replaceMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("editing a transaction", () => {
+    const EDIT_BUTTON_NAME =
+      "Edytuj transakcję: Zakupy w Biedronce, 17.11.2026";
+    const UPDATED: TransactionResponse = {
+      ...EXPENSE_PLN,
+      amount: 200,
+      amountPln: 200,
+    };
+
+    function renderList(transactions = TEST_TRANSACTIONS) {
+      return renderWithState({
+        status: "ready",
+        page: makePage(transactions),
+      });
+    }
+
+    // Shows a new state of the list, as the hook does after retry().
+    function showState(
+      rerender: RenderResult["rerender"],
+      state: UseTransactionsResult["state"],
+    ) {
+      useTransactionsMock.mockReturnValue({ state, retry: retryMock });
+      rerender(
+        <TransactionsView
+          filters={DEFAULT_TRANSACTION_FILTERS}
+          monthOptions={TEST_MONTH_OPTIONS}
+        />,
+      );
+    }
+
+    function openEditDialog(name = EDIT_BUTTON_NAME): HTMLElement {
+      const pencil = screen.getByRole("button", { name });
+      fireEvent.click(pencil);
+      return pencil;
+    }
+
+    function valueOf(dialog: HTMLElement, label: string): string {
+      return (within(dialog).getByLabelText(label) as HTMLInputElement).value;
+    }
+
+    async function clickSaveChanges() {
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Zapisz zmiany" }));
+      });
+    }
+
+    it("opens the dialog in edit mode filled from the row without sending anything", () => {
+      renderList();
+
+      openEditDialog();
+
+      const dialog = screen.getByRole("dialog", { name: "Edytuj transakcję" });
+      expect(valueOf(dialog, "Kwota transakcji *")).toBe("184,50");
+      expect(valueOf(dialog, "Waluta")).toBe("PLN");
+      expect(valueOf(dialog, "Opis transakcji *")).toBe("Zakupy w Biedronce");
+      expect(valueOf(dialog, "Kategoria *")).toBe("1");
+      expect(valueOf(dialog, "Data transakcji *")).toBe("2026-11-17");
+      expect(updateTransactionMock).not.toHaveBeenCalled();
+      expect(createTransactionMock).not.toHaveBeenCalled();
+    });
+
+    it("puts the changed transaction, closes the dialog, reloads the list and then shows the toast", async () => {
+      updateTransactionMock.mockResolvedValue(UPDATED);
+      renderList();
+      openEditDialog();
+      fillField(screen.getByRole("dialog"), "Kwota transakcji *", "200,00");
+
+      await clickSaveChanges();
+
+      expect(updateTransactionMock).toHaveBeenCalledWith(
+        "token",
+        EXPENSE_PLN.id,
+        {
+          amount: 200,
+          currency: "PLN",
+          categoryId: 1,
+          date: "2026-11-17",
+          description: "Zakupy w Biedronce",
+          type: "EXPENSE",
+        },
+      );
+      expect(createTransactionMock).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(retryMock).toHaveBeenCalledTimes(1);
+      expect(showToastMock).toHaveBeenCalledWith(
+        "Transakcja została zaktualizowana",
+      );
+      const [retryOrder = 0] = retryMock.mock.invocationCallOrder;
+      const [toastOrder = 0] = showToastMock.mock.invocationCallOrder;
+      expect(retryOrder).toBeGreaterThan(0);
+      expect(retryOrder).toBeLessThan(toastOrder);
+    });
+
+    it("returns the focus to the pencil of the same row once the list is back", async () => {
+      updateTransactionMock.mockResolvedValue(UPDATED);
+      const { rerender } = renderList();
+      openEditDialog();
+      await clickSaveChanges();
+
+      showState(rerender, { status: "loading" });
+      showState(rerender, { status: "ready", page: makePage([UPDATED]) });
+
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: EDIT_BUTTON_NAME }),
+      );
+    });
+
+    it("focuses the add button when the edited row is not on the reloaded page", async () => {
+      updateTransactionMock.mockResolvedValue(UPDATED);
+      const { rerender } = renderList();
+      openEditDialog();
+      await clickSaveChanges();
+
+      showState(rerender, { status: "loading" });
+      showState(rerender, { status: "ready", page: makePage([INCOME_PLN]) });
+
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "+ Dodaj wydatek" }),
+      );
+    });
+
+    it("focuses the add button when the reload fails and does not steal the focus later", async () => {
+      updateTransactionMock.mockResolvedValue(UPDATED);
+      const { rerender } = renderList();
+      openEditDialog();
+      await clickSaveChanges();
+
+      showState(rerender, { status: "loading" });
+      showState(rerender, { status: "error" });
+
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "+ Dodaj wydatek" }),
+      );
+
+      screen.getByRole("button", { name: "Spróbuj ponownie" }).focus();
+      showState(rerender, { status: "ready", page: makePage([UPDATED]) });
+
+      expect(document.activeElement).not.toBe(
+        screen.getByRole("button", { name: EDIT_BUTTON_NAME }),
+      );
+    });
+
+    it("sends nothing and returns the focus to the pencil on Anuluj", () => {
+      renderList();
+      const pencil = openEditDialog();
+
+      fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
+
+      expect(updateTransactionMock).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(retryMock).not.toHaveBeenCalled();
+      expect(showToastMock).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(pencil);
+    });
+
+    it.each([
+      [404, "Nie znaleziono zasobu."],
+      [503, "Nie udało się pobrać kursu waluty."],
+    ] as const)(
+      "keeps the dialog open with the data and shows the detail of a %i answer",
+      async (status, detail) => {
+        updateTransactionMock.mockRejectedValue(
+          new ApiError(status, { status, detail }),
+        );
+        renderList();
+        openEditDialog();
+
+        await clickSaveChanges();
+
+        const dialog = screen.getByRole("dialog", {
+          name: "Edytuj transakcję",
+        });
+        expect(within(dialog).getByRole("alert").textContent).toContain(detail);
+        expect(valueOf(dialog, "Kwota transakcji *")).toBe("184,50");
+        expect(retryMock).not.toHaveBeenCalled();
+        expect(showToastMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it("asks for a description before saving a transaction that has none", async () => {
+      renderList([{ ...EXPENSE_PLN, description: null }]);
+      openEditDialog("Edytuj transakcję: Bez opisu, 17.11.2026");
+
+      const dialog = screen.getByRole("dialog", { name: "Edytuj transakcję" });
+      expect(valueOf(dialog, "Opis transakcji *")).toBe("");
+
+      await clickSaveChanges();
+
+      expect(screen.getByText("Podaj opis transakcji.")).toBeTruthy();
+      expect(updateTransactionMock).not.toHaveBeenCalled();
+    });
+
+    it("tells that the saved rate stays for an unchanged foreign currency", () => {
+      renderList();
+
+      openEditDialog("Edytuj transakcję: Bilety lotnicze, 12.11.2026");
+
+      expect(
+        screen.getByText(
+          "≈ 431,00 PLN po kursie z dnia transakcji (4,3100); kurs się nie zmieni.",
+        ),
+      ).toBeTruthy();
     });
   });
 });

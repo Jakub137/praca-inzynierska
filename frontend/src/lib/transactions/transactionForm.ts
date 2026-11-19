@@ -2,6 +2,7 @@ import type {
   CategoryResponse,
   CreateTransactionRequest,
   SupportedCurrency,
+  TransactionResponse,
   TransactionType,
 } from "@/types/api";
 
@@ -71,6 +72,20 @@ export function createEmptyFormValues(date: string): TransactionFormValues {
     description: "",
     categoryId: "",
     date,
+  };
+}
+
+// No thousands separator: AMOUNT_PATTERN does not accept spaces. A transaction saved without a
+// description gets an empty field, and the form requires a description before saving.
+export function toFormValues(
+  transaction: TransactionResponse,
+): TransactionFormValues {
+  return {
+    amount: transaction.amount.toFixed(2).replace(".", ","),
+    currency: transaction.currency,
+    description: transaction.description ?? "",
+    categoryId: String(transaction.categoryId),
+    date: transaction.date,
   };
 }
 

@@ -4,14 +4,21 @@ import { useId } from "react";
 import { FormInput } from "@/components/ui/FormInput";
 import { SelectField } from "@/components/ui/SelectField";
 import type { TransactionFormState } from "@/hooks/useTransactionForm";
-import { buildAmountHint } from "@/lib/transactions/nbpNotice";
+import {
+  type AmountHintEdit,
+  buildAmountHint,
+} from "@/lib/transactions/nbpNotice";
 import {
   AMOUNT_INPUT_MAX_LENGTH,
   CURRENCY_OPTIONS,
   DESCRIPTION_MAX_LENGTH,
   parseCurrency,
 } from "@/lib/transactions/transactionForm";
-import type { CategoryResponse, CurrencyRateResponse } from "@/types/api";
+import type {
+  CategoryResponse,
+  CurrencyRateResponse,
+  TransactionResponse,
+} from "@/types/api";
 
 export type CategoriesStatus = "loading" | "ready" | "error";
 
@@ -24,6 +31,8 @@ type TransactionFormFieldsProps = {
   categoriesStatus: CategoriesStatus;
   // Empty while the rates load or when the request failed.
   rates: readonly CurrencyRateResponse[];
+  // Set in edit mode: the rate kept by the server decides the hint under the amount.
+  savedTransaction?: TransactionResponse;
 };
 
 type CategoryGroupProps = {
@@ -86,11 +95,19 @@ function getCategoryError(
   return message ?? "";
 }
 
+function toHintEdit(
+  saved: TransactionResponse | undefined,
+  date: string,
+): AmountHintEdit | undefined {
+  return saved === undefined ? undefined : { saved, date };
+}
+
 export function TransactionFormFields({
   form,
   categories,
   categoriesStatus,
   rates,
+  savedTransaction,
 }: TransactionFormFieldsProps) {
   const idPrefix = useId();
   const { values, errors, refs, setField } = form;
@@ -117,7 +134,12 @@ export function TransactionFormFields({
           maxLength={AMOUNT_INPUT_MAX_LENGTH}
           value={values.amount}
           onChange={(event) => setField("amount", event.target.value)}
-          hint={buildAmountHint(values.amount, values.currency, rates)}
+          hint={buildAmountHint(
+            values.amount,
+            values.currency,
+            rates,
+            toHintEdit(savedTransaction, values.date),
+          )}
           error={errors.amount}
         />
         <SelectField

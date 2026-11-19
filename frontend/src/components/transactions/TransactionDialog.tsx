@@ -16,6 +16,7 @@ import type {
   CategoryResponse,
   CreateTransactionRequest,
   CurrencyRateResponse,
+  TransactionResponse,
   TransactionType,
 } from "@/types/api";
 
@@ -29,6 +30,8 @@ export type TransactionDialogProps = {
   // Rejects with the failure: the dialog stays open and shows its message.
   onSubmit?: (request: CreateTransactionRequest) => Promise<void>;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  // Edit mode: the saved transaction; its rate decides the hint under the amount.
+  savedTransaction?: TransactionResponse;
 };
 
 const DIALOG_TEXTS = {
@@ -74,6 +77,7 @@ export function TransactionDialog({
   onClose,
   onSubmit,
   returnFocusRef,
+  savedTransaction,
 }: TransactionDialogProps) {
   const formId = useId();
   const alertRef = useRef<HTMLDivElement>(null);
@@ -140,6 +144,7 @@ export function TransactionDialog({
           categories={categories}
           categoriesStatus={toCategoriesStatus(categoriesState)}
           rates={rates}
+          savedTransaction={savedTransaction}
         />
       </form>
     </Modal>

@@ -13,11 +13,13 @@ import {
 } from "@/lib/api/errors";
 import {
   createEmptyFormValues,
+  toFormValues,
   type TransactionFormValues,
 } from "@/lib/transactions/transactionForm";
 import { TEST_CATEGORIES } from "@/test-utils/categories";
 import { TEST_RATES } from "@/test-utils/currencyRates";
 import { installDialogStub } from "@/test-utils/dialog";
+import { EXPENSE_EUR } from "@/test-utils/transactions";
 
 const useCategoriesMock = vi.hoisted(() => vi.fn<() => CategoriesState>());
 const useCurrencyRatesMock = vi.hoisted(() =>
@@ -558,5 +560,67 @@ describe("TransactionDialog", () => {
 
     expect(screen.queryByRole("alert")).toBeNull();
     expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  describe("amount hint in edit mode", () => {
+    // EUR 100, rate 4.31, date 2026-11-12.
+    const SAVED = EXPENSE_EUR;
+    const SAVED_RATE_HINT =
+      "≈ 431,00 PLN po kursie z dnia transakcji (4,3100); kurs się nie zmieni.";
+
+    function renderEdit() {
+      return renderDialog({
+        mode: "edit",
+        initialValues: toFormValues(SAVED),
+        savedTransaction: SAVED,
+      });
+    }
+
+    it("says that the saved rate stays when the currency and the date are unchanged", () => {
+      renderEdit();
+
+      expect(screen.getByText(SAVED_RATE_HINT)).toBeTruthy();
+    });
+
+    it("shows the saved-rate hint even when the current rates did not load", () => {
+      useCurrencyRatesMock.mockReturnValue({ status: "loading" });
+      renderEdit();
+
+      expect(screen.getByText(SAVED_RATE_HINT)).toBeTruthy();
+    });
+
+    it("switches to the current rate notice when the date changes", () => {
+      renderEdit();
+
+      fill(DATE, "2026-11-13");
+
+      expect(screen.queryByText(SAVED_RATE_HINT)).toBeNull();
+      expect(
+        screen.getByText(
+          `≈ 431,00 PLN wg kursu średniego NBP z 17.11.2026 (4,3100). ${SERVER_NOTE}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it("switches to the current rate notice when the currency changes", () => {
+      renderEdit();
+
+      fill("Waluta", "USD");
+
+      expect(screen.queryByText(SAVED_RATE_HINT)).toBeNull();
+      expect(
+        screen.getByText(
+          `≈ 402,00 PLN wg kursu średniego NBP z 17.11.2026 (4,0200). ${SERVER_NOTE}`,
+        ),
+      ).toBeTruthy();
+    });
+
+    it("never shows the saved-rate text when creating", () => {
+      renderDialog();
+
+      fill("Waluta", "EUR");
+
+      expect(screen.queryByText(/kurs się nie zmieni/)).toBeNull();
+    });
   });
 });

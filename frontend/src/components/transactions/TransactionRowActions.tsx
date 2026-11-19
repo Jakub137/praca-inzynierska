@@ -18,9 +18,14 @@ export type TransactionDeleteHandler = (
   opener: HTMLElement,
 ) => void;
 
+export type TransactionEditHandler = (
+  transaction: TransactionResponse,
+  opener: HTMLElement,
+) => void;
+
 type TransactionRowActionsProps = {
   transaction: TransactionResponse;
-  onEdit?: (transaction: TransactionResponse) => void;
+  onEdit?: TransactionEditHandler;
   onDelete?: TransactionDeleteHandler;
 };
 
@@ -43,8 +48,9 @@ export function TransactionRowActions({
         type="button"
         title={EDIT_LABEL}
         aria-label={`${EDIT_LABEL}: ${rowDescription}`}
+        data-edit-for={transaction.id}
         className={ACTION_BUTTON}
-        onClick={() => onEdit?.(transaction)}
+        onClick={(event) => onEdit?.(transaction, event.currentTarget)}
       >
         <PencilIcon className="size-5" />
       </button>

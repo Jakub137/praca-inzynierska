@@ -6,10 +6,12 @@ import {
   parseAmountOrNull,
   parseCurrency,
   parseTransactionForm,
+  toFormValues,
   toLocalIsoDate,
   type TransactionFormValues,
 } from "@/lib/transactions/transactionForm";
 import { TEST_CATEGORIES } from "@/test-utils/categories";
+import { EXPENSE_PLN, INCOME_PLN } from "@/test-utils/transactions";
 
 const VALID_VALUES: TransactionFormValues = {
   amount: "184,50",
@@ -221,4 +223,49 @@ describe("parseAmountOrNull", () => {
       expect(parseAmountOrNull(raw)).toBeNull();
     },
   );
+});
+
+describe("toFormValues", () => {
+  it("writes the amount with two decimals and a comma", () => {
+    expect(toFormValues(EXPENSE_PLN).amount).toBe("184,50");
+  });
+
+  it("writes a round amount with two decimals and without a thousands separator", () => {
+    expect(toFormValues(INCOME_PLN).amount).toBe("7500,00");
+  });
+
+  it("copies the currency and the date and turns the category id into text", () => {
+    expect(toFormValues(EXPENSE_PLN)).toEqual({
+      amount: "184,50",
+      currency: "PLN",
+      description: "Zakupy w Biedronce",
+      categoryId: "1",
+      date: "2026-11-17",
+    });
+  });
+
+  it("turns a missing description into an empty field", () => {
+    expect(
+      toFormValues({ ...EXPENSE_PLN, description: null }).description,
+    ).toBe("");
+  });
+
+  it("gives values that pass the form validation unchanged", () => {
+    const result = parseTransactionForm(
+      toFormValues(EXPENSE_PLN),
+      TEST_CATEGORIES,
+    );
+
+    expect(result).toEqual({
+      status: "valid",
+      request: {
+        amount: 184.5,
+        currency: "PLN",
+        categoryId: 1,
+        date: "2026-11-17",
+        description: "Zakupy w Biedronce",
+        type: "EXPENSE",
+      },
+    });
+  });
 });
