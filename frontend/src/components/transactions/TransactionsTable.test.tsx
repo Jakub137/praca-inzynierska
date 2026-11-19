@@ -85,4 +85,27 @@ describe("TransactionsTable", () => {
         .getAttribute("tabindex"),
     ).toBe("0");
   });
+
+  it("puts an edit and a delete button in the actions cell of the row", () => {
+    renderTable([EXPENSE_PLN]);
+    const row = screen.getByRole("row", { name: /Zakupy w Biedronce/ });
+
+    const buttons = within(row).getAllByRole("button");
+
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Edytuj transakcję: Zakupy w Biedronce, 17.11.2026",
+      "Usuń transakcję: Zakupy w Biedronce, 17.11.2026",
+    ]);
+    expect(
+      buttons.every((button) => button.closest("td") === row.lastElementChild),
+    ).toBe(true);
+  });
+
+  it("gives every row its own pair of buttons", () => {
+    renderTable();
+
+    expect(screen.getAllByRole("button")).toHaveLength(
+      TEST_TRANSACTIONS.length * 2,
+    );
+  });
 });
