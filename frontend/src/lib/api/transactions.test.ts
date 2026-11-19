@@ -37,4 +37,41 @@ describe("transactions API", () => {
     });
     expect(result).toEqual(body);
   });
+
+  it("adds every filter that is set, in a fixed order", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(makePage([])), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await getTransactions("abc", {
+      page: 1,
+      size: 15,
+      categoryId: 3,
+      type: "EXPENSE",
+      dateFrom: "2026-02-01",
+      dateTo: "2026-02-28",
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${BASE_URL}/transactions?page=1&size=15&categoryId=3&type=EXPENSE&dateFrom=2026-02-01&dateTo=2026-02-28`,
+    );
+  });
+
+  it("does not send filters that are not set", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(makePage([])), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await getTransactions("abc", { page: 0, size: 15, type: "INCOME" });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${BASE_URL}/transactions?page=0&size=15&type=INCOME`,
+    );
+  });
 });

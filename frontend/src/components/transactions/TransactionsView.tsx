@@ -1,12 +1,35 @@
 "use client";
 
+import Link from "next/link";
 import { TransferIcon } from "@/components/icons/TransferIcon";
+import { TransactionsFilters } from "@/components/transactions/TransactionsFilters";
+import { TransactionsPagination } from "@/components/transactions/TransactionsPagination";
 import { TransactionsSkeleton } from "@/components/transactions/TransactionsSkeleton";
 import { TransactionsTable } from "@/components/transactions/TransactionsTable";
 import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { useTransactions } from "@/hooks/useTransactions";
+import {
+  type TransactionsState,
+  useTransactions,
+} from "@/hooks/useTransactions";
 import { FOCUS_RING } from "@/lib/focusRing";
+import {
+  buildTransactionsHref,
+  DEFAULT_TRANSACTION_FILTERS,
+  FIRST_PAGE,
+  hasActiveFilters,
+  type TransactionFilters,
+} from "@/lib/transactions/filters";
+import type { MonthOption } from "@/lib/transactions/months";
+
+const PRIMARY_LINK = `inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline ${FOCUS_RING}`;
+
+type TransactionsViewProps = {
+  filters: TransactionFilters;
+  monthOptions: readonly MonthOption[];
+};
+
+type ActiveState = Exclude<TransactionsState, { readonly status: "idle" }>;
 
 type TransactionsErrorProps = {
   onRetry: () => void;
@@ -27,26 +50,93 @@ function TransactionsError({ onRetry }: TransactionsErrorProps) {
   );
 }
 
-export function TransactionsView() {
-  const { state, retry } = useTransactions();
+type NoResultsProps = {
+  filters: TransactionFilters;
+  // True when the requested page lies beyond the last page of the results.
+  isPageOutOfRange: boolean;
+};
 
-  if (state.status === "idle") {
-    return null;
-  }
+function NoResults({ filters, isPageOutOfRange }: NoResultsProps) {
+  const content = isPageOutOfRange
+    ? {
+        title: "Nie ma takiej strony wyników",
+        description: "Lista ma mniej stron. Wróć do pierwszej strony.",
+        href: buildTransactionsHref({ ...filters, page: FIRST_PAGE }),
+        label: "Przejdź do pierwszej strony",
+      }
+    : {
+        title: "Brak transakcji dla wybranych filtrów",
+        description: "Zmień filtry lub wróć do pełnej listy.",
+        href: buildTransactionsHref(DEFAULT_TRANSACTION_FILTERS),
+        label: "Wyczyść filtry",
+      };
+  return (
+    <EmptyState
+      icon={<TransferIcon />}
+      title={content.title}
+      description={content.description}
+      actionButton={
+        <Link href={content.href} className={PRIMARY_LINK}>
+          {content.label}
+        </Link>
+      }
+    />
+  );
+}
+
+type TransactionsResultsProps = {
+  state: ActiveState;
+  filters: TransactionFilters;
+  onRetry: () => void;
+};
+
+function TransactionsResults({
+  state,
+  filters,
+  onRetry,
+}: TransactionsResultsProps) {
   if (state.status === "loading") {
     return <TransactionsSkeleton />;
   }
   if (state.status === "error") {
-    return <TransactionsError onRetry={retry} />;
+    return <TransactionsError onRetry={onRetry} />;
   }
-  if (state.page.totalElements === 0) {
+  const { page } = state;
+  if (page.content.length === 0) {
+    if (page.totalElements === 0 && !hasActiveFilters(filters)) {
+      return (
+        <EmptyState
+          icon={<TransferIcon />}
+          title="Brak transakcji"
+          description="Gdy dodasz pierwszą transakcję, pojawi się tutaj."
+        />
+      );
+    }
     return (
-      <EmptyState
-        icon={<TransferIcon />}
-        title="Brak transakcji"
-        description="Gdy dodasz pierwszą transakcję, pojawi się tutaj."
-      />
+      <NoResults filters={filters} isPageOutOfRange={page.totalElements > 0} />
     );
   }
-  return <TransactionsTable transactions={state.page.content} />;
+  return (
+    <div className="flex flex-col gap-4">
+      <TransactionsTable transactions={page.content} />
+      <TransactionsPagination filters={filters} result={page} />
+    </div>
+  );
+}
+
+export function TransactionsView({
+  filters,
+  monthOptions,
+}: TransactionsViewProps) {
+  const { state, retry } = useTransactions(filters);
+
+  if (state.status === "idle") {
+    return null;
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <TransactionsFilters filters={filters} monthOptions={monthOptions} />
+      <TransactionsResults state={state} filters={filters} onRetry={retry} />
+    </div>
+  );
 }

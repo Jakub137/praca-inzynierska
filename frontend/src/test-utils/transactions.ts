@@ -1,3 +1,4 @@
+import type { MonthOption } from "@/lib/transactions/months";
 import type { PageResponse, TransactionResponse } from "@/types/api";
 
 export const EXPENSE_PLN: TransactionResponse = {
@@ -54,8 +55,14 @@ export const TEST_TRANSACTIONS: readonly TransactionResponse[] = [
   EXPENSE_EUR,
 ];
 
+export const TEST_MONTH_OPTIONS: readonly MonthOption[] = [
+  { value: "2026-11", label: "Listopad 2026" },
+  { value: "2026-10", label: "Październik 2026" },
+];
+
 export function makePage(
   content: readonly TransactionResponse[],
+  overrides: Partial<PageResponse<TransactionResponse>> = {},
 ): PageResponse<TransactionResponse> {
   return {
     content,
@@ -63,5 +70,6 @@ export function makePage(
     size: 15,
     totalElements: content.length,
     totalPages: content.length === 0 ? 0 : 1,
+    ...overrides,
   };
 }
