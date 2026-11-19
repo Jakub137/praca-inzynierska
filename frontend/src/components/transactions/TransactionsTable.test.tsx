@@ -130,4 +130,19 @@ describe("TransactionsTable", () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith(INCOME_PLN, button);
   });
+
+  it("passes the edit handler to the buttons of the clicked row", () => {
+    const onEdit = vi.fn();
+    render(
+      <TransactionsTable transactions={TEST_TRANSACTIONS} onEdit={onEdit} />,
+    );
+    const button = screen.getByRole("button", {
+      name: "Edytuj transakcję: Wynagrodzenie za listopad, 10.11.2026",
+    });
+
+    fireEvent.click(button);
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onEdit).toHaveBeenCalledWith(INCOME_PLN, button);
+  });
 });

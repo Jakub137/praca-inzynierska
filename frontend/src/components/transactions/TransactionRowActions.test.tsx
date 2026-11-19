@@ -44,7 +44,7 @@ describe("TransactionRowActions", () => {
     ).toBe("Usuń transakcję");
   });
 
-  it("calls onEdit with the transaction and not onDelete", () => {
+  it("calls onEdit with the transaction and the clicked button, and not onDelete", () => {
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     render(
@@ -54,12 +54,28 @@ describe("TransactionRowActions", () => {
         onDelete={onDelete}
       />,
     );
+    const editButton = screen.getByRole("button", { name: EDIT_NAME });
 
-    fireEvent.click(screen.getByRole("button", { name: EDIT_NAME }));
+    fireEvent.click(editButton);
 
     expect(onEdit).toHaveBeenCalledTimes(1);
-    expect(onEdit).toHaveBeenCalledWith(EXPENSE_PLN);
+    expect(onEdit).toHaveBeenCalledWith(EXPENSE_PLN, editButton);
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("marks only the edit button with the id of its transaction", () => {
+    render(<TransactionRowActions transaction={EXPENSE_PLN} />);
+
+    expect(
+      screen
+        .getByRole("button", { name: EDIT_NAME })
+        .getAttribute("data-edit-for"),
+    ).toBe(EXPENSE_PLN.id);
+    expect(
+      screen
+        .getByRole("button", { name: DELETE_NAME })
+        .hasAttribute("data-edit-for"),
+    ).toBe(false);
   });
 
   it("calls onDelete with the transaction and the clicked button, and not onEdit", () => {

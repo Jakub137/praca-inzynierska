@@ -2,6 +2,7 @@ import { CategoryIcon } from "@/components/icons/CategoryIcon";
 import { TransactionAmount } from "@/components/transactions/TransactionAmount";
 import {
   type TransactionDeleteHandler,
+  type TransactionEditHandler,
   TransactionRowActions,
 } from "@/components/transactions/TransactionRowActions";
 import { formatIsoDate } from "@/lib/format/date";
@@ -10,10 +11,15 @@ import type { TransactionResponse } from "@/types/api";
 
 type TransactionRowProps = {
   transaction: TransactionResponse;
+  onEdit?: TransactionEditHandler;
   onDelete?: TransactionDeleteHandler;
 };
 
-export function TransactionRow({ transaction, onDelete }: TransactionRowProps) {
+export function TransactionRow({
+  transaction,
+  onEdit,
+  onDelete,
+}: TransactionRowProps) {
   const title = getTransactionTitle(transaction);
 
   return (
@@ -41,7 +47,11 @@ export function TransactionRow({ transaction, onDelete }: TransactionRowProps) {
         <TransactionAmount transaction={transaction} />
       </td>
       <td className="px-4 py-1 text-right">
-        <TransactionRowActions transaction={transaction} onDelete={onDelete} />
+        <TransactionRowActions
+          transaction={transaction}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </td>
     </tr>
   );

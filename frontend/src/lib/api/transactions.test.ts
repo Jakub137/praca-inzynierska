@@ -4,13 +4,17 @@ import {
   createTransaction,
   deleteTransaction,
   getTransactions,
+  updateTransaction,
 } from "@/lib/api/transactions";
 import {
   EXPENSE_PLN,
   makePage,
   TEST_TRANSACTIONS,
 } from "@/test-utils/transactions";
-import type { CreateTransactionRequest } from "@/types/api";
+import type {
+  CreateTransactionRequest,
+  UpdateTransactionRequest,
+} from "@/types/api";
 
 const BASE_URL = "http://localhost:8080/api/v1";
 const fetchMock = vi.fn<typeof fetch>();
@@ -185,5 +189,62 @@ describe("transactions API", () => {
         problem: { detail: "Nie znaleziono zasobu." },
       });
     });
+  });
+
+  describe("updateTransaction", () => {
+    const request: UpdateTransactionRequest = {
+      amount: 200,
+      currency: "EUR",
+      categoryId: 1,
+      date: "2026-11-19",
+      description: "Zakupy w Biedronce",
+      type: "EXPENSE",
+    };
+
+    it("puts the request as JSON to the transaction address with the Bearer token and returns the saved transaction", async () => {
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify(EXPENSE_PLN), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const result = await updateTransaction("abc", EXPENSE_PLN.id, request);
+
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/transactions/${EXPENSE_PLN.id}`);
+      expect(init?.method).toBe("PUT");
+      expect(init?.headers).toEqual({
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: "Bearer abc",
+      });
+      expect(init?.body).toBe(JSON.stringify(request));
+      expect(result).toEqual(EXPENSE_PLN);
+    });
+
+    it.each([
+      [404, "Nie znaleziono zasobu."],
+      [503, "Nie udało się pobrać kursu waluty."],
+    ] as const)(
+      "rejects with an ApiError that carries the detail of a %i answer",
+      async (status, detail) => {
+        fetchMock.mockResolvedValue(
+          new Response(JSON.stringify({ status, detail }), {
+            status,
+            headers: { "Content-Type": "application/problem+json" },
+          }),
+        );
+
+        const error: unknown = await updateTransaction(
+          "abc",
+          EXPENSE_PLN.id,
+          request,
+        ).catch((rejection: unknown) => rejection);
+
+        expect(error).toBeInstanceOf(ApiError);
+        expect(error).toMatchObject({ status, problem: { detail } });
+      },
+    );
   });
 });

@@ -1,5 +1,8 @@
 import { TransactionRow } from "@/components/transactions/TransactionRow";
-import type { TransactionDeleteHandler } from "@/components/transactions/TransactionRowActions";
+import type {
+  TransactionDeleteHandler,
+  TransactionEditHandler,
+} from "@/components/transactions/TransactionRowActions";
 import { FOCUS_RING } from "@/lib/focusRing";
 import type { TransactionResponse } from "@/types/api";
 
@@ -8,11 +11,13 @@ const HEADER_CELL =
 
 type TransactionsTableProps = {
   transactions: readonly TransactionResponse[];
+  onEdit?: TransactionEditHandler;
   onDelete?: TransactionDeleteHandler;
 };
 
 export function TransactionsTable({
   transactions,
+  onEdit,
   onDelete,
 }: TransactionsTableProps) {
   return (
@@ -50,6 +55,7 @@ export function TransactionsTable({
             <TransactionRow
               key={transaction.id}
               transaction={transaction}
+              onEdit={onEdit}
               onDelete={onDelete}
             />
           ))}

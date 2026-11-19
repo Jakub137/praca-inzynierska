@@ -6,7 +6,10 @@ import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { TransferIcon } from "@/components/icons/TransferIcon";
 import { DeleteTransactionDialog } from "@/components/transactions/DeleteTransactionDialog";
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
-import type { TransactionDeleteHandler } from "@/components/transactions/TransactionRowActions";
+import type {
+  TransactionDeleteHandler,
+  TransactionEditHandler,
+} from "@/components/transactions/TransactionRowActions";
 import { TransactionsFilters } from "@/components/transactions/TransactionsFilters";
 import { TransactionsPagination } from "@/components/transactions/TransactionsPagination";
 import { TransactionsSkeleton } from "@/components/transactions/TransactionsSkeleton";
@@ -15,10 +18,12 @@ import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useCreateTransaction } from "@/hooks/useCreateTransaction";
 import { useDeleteTransaction } from "@/hooks/useDeleteTransaction";
+import { useEditFocusRestore } from "@/hooks/useEditFocusRestore";
 import {
   type TransactionsState,
   useTransactions,
 } from "@/hooks/useTransactions";
+import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
 import { FOCUS_RING } from "@/lib/focusRing";
 import { getFiltersAfterDelete } from "@/lib/transactions/deleteNavigation";
 import {
@@ -31,6 +36,7 @@ import {
 import type { MonthOption } from "@/lib/transactions/months";
 import {
   createEmptyFormValues,
+  toFormValues,
   toLocalIsoDate,
   type TransactionFormValues,
 } from "@/lib/transactions/transactionForm";
@@ -102,6 +108,7 @@ type TransactionsResultsProps = {
   state: ActiveState;
   filters: TransactionFilters;
   onRetry: () => void;
+  onEdit: TransactionEditHandler;
   onDelete: TransactionDeleteHandler;
 };
 
@@ -109,6 +116,7 @@ function TransactionsResults({
   state,
   filters,
   onRetry,
+  onEdit,
   onDelete,
 }: TransactionsResultsProps) {
   if (state.status === "loading") {
@@ -134,7 +142,11 @@ function TransactionsResults({
   }
   return (
     <div className="flex flex-col gap-4">
-      <TransactionsTable transactions={page.content} onDelete={onDelete} />
+      <TransactionsTable
+        transactions={page.content}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
       <TransactionsPagination filters={filters} result={page} />
     </div>
   );
@@ -149,13 +161,19 @@ export function TransactionsView({
   const openerRef = useRef<HTMLElement | null>(null);
   const addButtonRef = useRef<HTMLButtonElement | null>(null);
   const deleteOpenerRef = useRef<HTMLElement | null>(null);
+  const editOpenerRef = useRef<HTMLElement | null>(null);
   // Set after a successful deletion: the trash button is gone, so the focus goes to the add button.
   const focusAddButtonRef = useRef(false);
   const [draft, setDraft] = useState<TransactionFormValues | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionResponse | null>(
     null,
   );
+  const [editTarget, setEditTarget] = useState<TransactionResponse | null>(
+    null,
+  );
   const rowsOnPage = state.status === "ready" ? state.page.content.length : 0;
+  // After a saved edit the list reloads: the focus goes back to the pencil of the same row.
+  const requestEditFocus = useEditFocusRestore(state, addButtonRef);
   // Order matters: close the dialog, reload the list (filters and page stay), then the hook shows the toast.
   const submitTransaction = useCreateTransaction({
     onCreated: () => {
@@ -183,6 +201,16 @@ export function TransactionsView({
     },
   });
 
+  // Order matters: remember the row for the focus, close the dialog, reload the list (filters and page
+  // stay), then the hook shows the toast.
+  const updateTransaction = useUpdateTransaction({
+    onUpdated: (id) => {
+      requestEditFocus(id);
+      setEditTarget(null);
+      retry();
+    },
+  });
+
   // Runs after the cleanup of the closing dialog, which returns the focus to the removed trash button,
   // so this focus wins. After Anuluj, Esc or the close button the flag is false and the dialog's own return stays.
   useEffect(() => {
@@ -202,6 +230,11 @@ export function TransactionsView({
   const openDeleteDialog: TransactionDeleteHandler = (transaction, opener) => {
     deleteOpenerRef.current = opener;
     setDeleteTarget(transaction);
+  };
+
+  const openEditDialog: TransactionEditHandler = (transaction, opener) => {
+    editOpenerRef.current = opener;
+    setEditTarget(transaction);
   };
 
   if (state.status === "idle") {
@@ -224,6 +257,7 @@ export function TransactionsView({
         state={state}
         filters={filters}
         onRetry={retry}
+        onEdit={openEditDialog}
         onDelete={openDeleteDialog}
       />
       {draft !== null && (
@@ -233,6 +267,17 @@ export function TransactionsView({
           returnFocusRef={openerRef}
           onClose={() => setDraft(null)}
           onSubmit={submitTransaction}
+        />
+      )}
+      {editTarget !== null && (
+        <TransactionDialog
+          key={editTarget.id}
+          mode="edit"
+          initialValues={toFormValues(editTarget)}
+          savedTransaction={editTarget}
+          returnFocusRef={editOpenerRef}
+          onClose={() => setEditTarget(null)}
+          onSubmit={(request) => updateTransaction(editTarget.id, request)}
         />
       )}
       {deleteTarget !== null && (

@@ -118,3 +118,6 @@ export type CreateTransactionRequest = {
   readonly description: string;
   readonly type: TransactionType;
 };
+
+// PUT replaces all fields, so it takes the same body as POST.
+export type UpdateTransactionRequest = CreateTransactionRequest;

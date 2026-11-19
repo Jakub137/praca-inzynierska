@@ -4,6 +4,7 @@ import type {
   PageResponse,
   TransactionResponse,
   TransactionType,
+  UpdateTransactionRequest,
 } from "@/types/api";
 
 export type TransactionsPageParams = {
@@ -57,6 +58,19 @@ export function createTransaction(
     body: request,
     token,
   });
+}
+
+// PUT replaces all fields and answers 200 with the saved transaction. The backend fetches a new rate
+// only when the currency or the date changed; 404 covers both a missing and another user's transaction.
+export function updateTransaction(
+  token: string,
+  id: string,
+  request: UpdateTransactionRequest,
+): Promise<TransactionResponse> {
+  return apiRequest<TransactionResponse>(
+    `/transactions/${encodeURIComponent(id)}`,
+    { method: "PUT", body: request, token },
+  );
 }
 
 // DELETE answers 204 without a body; 404 covers both a missing and another user's transaction.
