@@ -12,10 +12,16 @@ const DELETE_LABEL = "Usuń transakcję";
 // text-muted icon is 7.58:1 on white.
 const ACTION_BUTTON = `inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-slate-100 ${FOCUS_RING}`;
 
+// The clicked button is passed on so that the dialog can return the focus to it.
+export type TransactionDeleteHandler = (
+  transaction: TransactionResponse,
+  opener: HTMLElement,
+) => void;
+
 type TransactionRowActionsProps = {
   transaction: TransactionResponse;
   onEdit?: (transaction: TransactionResponse) => void;
-  onDelete?: (transaction: TransactionResponse) => void;
+  onDelete?: TransactionDeleteHandler;
 };
 
 // The accessible name starts with the visible tooltip text (label in name)
@@ -47,7 +53,7 @@ export function TransactionRowActions({
         title={DELETE_LABEL}
         aria-label={`${DELETE_LABEL}: ${rowDescription}`}
         className={ACTION_BUTTON}
-        onClick={() => onDelete?.(transaction)}
+        onClick={(event) => onDelete?.(transaction, event.currentTarget)}
       >
         <TrashIcon className="size-5" />
       </button>

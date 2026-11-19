@@ -62,7 +62,7 @@ describe("TransactionRowActions", () => {
     expect(onDelete).not.toHaveBeenCalled();
   });
 
-  it("calls onDelete with the transaction and not onEdit", () => {
+  it("calls onDelete with the transaction and the clicked button, and not onEdit", () => {
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     render(
@@ -72,11 +72,12 @@ describe("TransactionRowActions", () => {
         onDelete={onDelete}
       />,
     );
+    const deleteButton = screen.getByRole("button", { name: DELETE_NAME });
 
-    fireEvent.click(screen.getByRole("button", { name: DELETE_NAME }));
+    fireEvent.click(deleteButton);
 
     expect(onDelete).toHaveBeenCalledTimes(1);
-    expect(onDelete).toHaveBeenCalledWith(EXPENSE_PLN);
+    expect(onDelete).toHaveBeenCalledWith(EXPENSE_PLN, deleteButton);
     expect(onEdit).not.toHaveBeenCalled();
   });
 

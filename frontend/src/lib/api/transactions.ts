@@ -58,3 +58,11 @@ export function createTransaction(
     token,
   });
 }
+
+// DELETE answers 204 without a body; 404 covers both a missing and another user's transaction.
+export function deleteTransaction(token: string, id: string): Promise<void> {
+  return apiRequest<void>(`/transactions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    token,
+  });
+}

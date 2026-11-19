@@ -1,4 +1,5 @@
 import { TransactionRow } from "@/components/transactions/TransactionRow";
+import type { TransactionDeleteHandler } from "@/components/transactions/TransactionRowActions";
 import { FOCUS_RING } from "@/lib/focusRing";
 import type { TransactionResponse } from "@/types/api";
 
@@ -7,9 +8,13 @@ const HEADER_CELL =
 
 type TransactionsTableProps = {
   transactions: readonly TransactionResponse[];
+  onDelete?: TransactionDeleteHandler;
 };
 
-export function TransactionsTable({ transactions }: TransactionsTableProps) {
+export function TransactionsTable({
+  transactions,
+  onDelete,
+}: TransactionsTableProps) {
   return (
     <div
       role="region"
@@ -42,7 +47,11 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
         </thead>
         <tbody>
           {transactions.map((transaction) => (
-            <TransactionRow key={transaction.id} transaction={transaction} />
+            <TransactionRow
+              key={transaction.id}
+              transaction={transaction}
+              onDelete={onDelete}
+            />
           ))}
         </tbody>
       </table>

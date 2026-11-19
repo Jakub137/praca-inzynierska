@@ -38,7 +38,7 @@ vi.mock("@/hooks/useToast", () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 async function renderPage(
