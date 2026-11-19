@@ -121,6 +121,11 @@ function validateAmount(raw: string): string | null {
   return null;
 }
 
+// The amount as a number when it passes the same validation as the form, otherwise null.
+export function parseAmountOrNull(raw: string): number | null {
+  return validateAmount(raw) === null ? parseAmount(raw) : null;
+}
+
 function validateDescription(raw: string): string | null {
   const length = raw.trim().length;
   if (length === 0) {

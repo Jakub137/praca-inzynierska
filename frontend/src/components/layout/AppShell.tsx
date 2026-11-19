@@ -8,6 +8,7 @@ import {
 } from "@/components/layout/MobileDrawer";
 import { SessionGate } from "@/components/layout/SessionGate";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { ToastProvider } from "@/components/layout/ToastProvider";
 import { useMobileDrawer } from "@/hooks/useMobileDrawer";
 import { FOCUS_RING } from "@/lib/focusRing";
 
@@ -21,7 +22,7 @@ export function AppShell({ children }: AppShellProps) {
   const { isOpen, open, close, triggerRef } = useMobileDrawer();
 
   return (
-    <>
+    <ToastProvider>
       <div inert={isOpen} className="min-h-dvh lg:pl-64">
         <a
           href={`#${MAIN_CONTENT_ID}`}
@@ -43,6 +44,6 @@ export function AppShell({ children }: AppShellProps) {
         </main>
       </div>
       <MobileDrawer isOpen={isOpen} onClose={close} />
-    </>
+    </ToastProvider>
   );
 }

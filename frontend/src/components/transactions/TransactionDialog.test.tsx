@@ -1,32 +1,47 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TransactionDialog,
   type TransactionDialogProps,
 } from "@/components/transactions/TransactionDialog";
 import type { CategoriesState } from "@/hooks/useCategories";
+import type { CurrencyRatesState } from "@/hooks/useCurrencyRates";
+import {
+  ApiError,
+  NETWORK_ERROR_MESSAGE,
+  NetworkError,
+} from "@/lib/api/errors";
 import {
   createEmptyFormValues,
   type TransactionFormValues,
 } from "@/lib/transactions/transactionForm";
 import { TEST_CATEGORIES } from "@/test-utils/categories";
+import { TEST_RATES } from "@/test-utils/currencyRates";
 import { installDialogStub } from "@/test-utils/dialog";
 
 const useCategoriesMock = vi.hoisted(() => vi.fn<() => CategoriesState>());
+const useCurrencyRatesMock = vi.hoisted(() =>
+  vi.fn<() => CurrencyRatesState>(),
+);
 
 vi.mock("@/hooks/useCategories", () => ({
   useCategories: useCategoriesMock,
+}));
+
+vi.mock("@/hooks/useCurrencyRates", () => ({
+  useCurrencyRates: useCurrencyRatesMock,
 }));
 
 const AMOUNT = "Kwota transakcji *";
 const DESCRIPTION = "Opis transakcji *";
 const CATEGORY = "Kategoria *";
 const DATE = "Data transakcji *";
+const SERVER_NOTE = "Kwotę w PLN wyliczy serwer po kursie z dnia transakcji.";
 const INITIAL_VALUES = createEmptyFormValues("2026-11-19");
 
 function renderDialog(overrides: Partial<TransactionDialogProps> = {}) {
   const onClose = vi.fn();
-  const onSubmit = vi.fn();
+  const onSubmit = vi.fn(() => Promise.resolve());
   render(
     <TransactionDialog
       mode="create"
@@ -53,6 +68,13 @@ function clickSave(name = "Zapisz wydatek") {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
+// Clicks save and lets the pending request settle inside act().
+async function saveAndSettle(name = "Zapisz wydatek") {
+  await act(async () => {
+    clickSave(name);
+  });
+}
+
 function valueOf(label: string): string {
   return (screen.getByLabelText(label) as HTMLInputElement).value;
 }
@@ -64,6 +86,10 @@ describe("TransactionDialog", () => {
     useCategoriesMock.mockReturnValue({
       status: "ready",
       categories: TEST_CATEGORIES,
+    });
+    useCurrencyRatesMock.mockReturnValue({
+      status: "ready",
+      rates: TEST_RATES,
     });
   });
 
@@ -168,7 +194,8 @@ describe("TransactionDialog", () => {
     ).toEqual(["Wynagrodzenie"]);
   });
 
-  it("shows the NBP hint only for a foreign currency", () => {
+  it("shows the static NBP hint for a foreign currency while the rates load", () => {
+    useCurrencyRatesMock.mockReturnValue({ status: "loading" });
     renderDialog();
     const hint = "Przeliczenie po bieżącym kursie NBP dla walut obcych";
 
@@ -184,6 +211,31 @@ describe("TransactionDialog", () => {
     fill("Waluta", "PLN");
 
     expect(screen.queryByText(hint)).toBeNull();
+  });
+
+  it("shows the NBP rate and the PLN estimate for a foreign currency", () => {
+    renderDialog();
+
+    fill("Waluta", "EUR");
+
+    const rateOnly = screen.getByText(
+      `Kurs średni NBP z 17.11.2026: 4,3100. ${SERVER_NOTE}`,
+    );
+    expect(screen.getByLabelText(AMOUNT).getAttribute("aria-describedby")).toBe(
+      rateOnly.id,
+    );
+
+    fill(AMOUNT, "100");
+
+    expect(
+      screen.getByText(
+        `≈ 431,00 PLN wg kursu średniego NBP z 17.11.2026 (4,3100). ${SERVER_NOTE}`,
+      ),
+    ).toBeTruthy();
+
+    fill("Waluta", "PLN");
+
+    expect(screen.queryByText(/NBP/)).toBeNull();
   });
 
   it("shows a message under each empty required field and focuses the first", () => {
@@ -278,12 +330,12 @@ describe("TransactionDialog", () => {
   it.each([
     ["184,50", 184.5],
     ["184.50", 184.5],
-  ])("submits the amount %s as the number %s", (amount, expected) => {
+  ])("submits the amount %s as the number %s", async (amount, expected) => {
     const { onSubmit } = renderDialog();
     fillValidForm();
     fill(AMOUNT, amount);
 
-    clickSave();
+    await saveAndSettle();
 
     expect(onSubmit).toHaveBeenCalledWith({
       amount: expected,
@@ -295,14 +347,14 @@ describe("TransactionDialog", () => {
     });
   });
 
-  it("takes the type from the category and renames the save button", () => {
+  it("takes the type from the category and renames the save button", async () => {
     const { onSubmit } = renderDialog();
     fillValidForm();
     fill(CATEGORY, "9");
 
     expect(screen.queryByRole("button", { name: "Zapisz wydatek" })).toBeNull();
 
-    clickSave("Zapisz przychód");
+    await saveAndSettle("Zapisz przychód");
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ categoryId: 9, type: "INCOME" }),
@@ -313,13 +365,13 @@ describe("TransactionDialog", () => {
     expect(screen.getByRole("button", { name: "Zapisz wydatek" })).toBeTruthy();
   });
 
-  it("submits the chosen currency and the trimmed description", () => {
+  it("submits the chosen currency and the trimmed description", async () => {
     const { onSubmit } = renderDialog();
     fillValidForm();
     fill("Waluta", "EUR");
     fill(DESCRIPTION, "  Kawa  ");
 
-    clickSave();
+    await saveAndSettle();
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ currency: "EUR", description: "Kawa" }),
@@ -389,5 +441,122 @@ describe("TransactionDialog", () => {
     expect(screen.getByRole("button", { name: "Anuluj" }).className).toContain(
       "border-slate-300",
     );
+  });
+
+  it("disables the save button and shows the saving label until the answer", async () => {
+    let resolveSubmit: () => void = () => undefined;
+    const onSubmit = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSubmit = resolve;
+        }),
+    );
+    renderDialog({ onSubmit });
+    fillValidForm();
+
+    await saveAndSettle();
+
+    const saving = screen.getByRole("button", {
+      name: "Zapisywanie…",
+    }) as HTMLButtonElement;
+    expect(saving.disabled).toBe(true);
+
+    await act(async () => resolveSubmit());
+
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Zapisz wydatek",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+  });
+
+  it("does not send a second request while the first one is pending", async () => {
+    const onSubmit = vi.fn(() => new Promise<void>(() => undefined));
+    renderDialog({ onSubmit });
+    fillValidForm();
+    const form = screen
+      .getByRole("dialog")
+      .querySelector("form") as HTMLFormElement;
+
+    await act(async () => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    clickSave("Zapisywanie…");
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      "a 400 with detail",
+      new ApiError(400, {
+        status: 400,
+        detail: "Typ kategorii nie zgadza się z typem transakcji.",
+      }),
+      "Typ kategorii nie zgadza się z typem transakcji.",
+    ],
+    [
+      "a 503 with detail",
+      new ApiError(503, {
+        status: 503,
+        detail:
+          "Nie udało się pobrać kursu waluty. Spróbuj ponownie za chwilę albo wybierz walutę PLN.",
+      }),
+      "Nie udało się pobrać kursu waluty. Spróbuj ponownie za chwilę albo wybierz walutę PLN.",
+    ],
+    ["a network failure", new NetworkError(), NETWORK_ERROR_MESSAGE],
+  ])(
+    "keeps the dialog open with the data and explains %s",
+    async (_name, error, message) => {
+      const onSubmit = vi.fn().mockRejectedValue(error);
+      renderDialog({ onSubmit });
+      fillValidForm();
+
+      await saveAndSettle();
+
+      const alert = screen.getByRole("alert");
+      expect(alert.textContent).toContain(message);
+      expect(document.activeElement).toBe(alert);
+      expect(
+        screen.getByRole("dialog", { name: "Dodaj nową transakcję" }),
+      ).toBeTruthy();
+      expect(valueOf(AMOUNT)).toBe("184,50");
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Zapisz wydatek",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false);
+    },
+  );
+
+  it("removes the failure message when a field is edited", async () => {
+    renderDialog({ onSubmit: vi.fn().mockRejectedValue(new NetworkError()) });
+    fillValidForm();
+    await saveAndSettle();
+
+    fill(DESCRIPTION, "Inny opis");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("removes the failure message when the next request starts", async () => {
+    const onSubmit = vi
+      .fn()
+      .mockRejectedValueOnce(new NetworkError())
+      .mockReturnValueOnce(new Promise<void>(() => undefined));
+    renderDialog({ onSubmit });
+    fillValidForm();
+    await saveAndSettle();
+    expect(screen.getByRole("alert")).toBeTruthy();
+
+    await saveAndSettle();
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 });
