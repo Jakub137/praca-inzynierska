@@ -52,7 +52,7 @@ describe("TransactionsTable", () => {
   });
 
   it("shows the PLN amount and the original foreign amount in the amount cell of the row", () => {
-    renderTable();
+    renderTable([EXPENSE_EUR]);
     const row = screen.getByRole("row", { name: /Bilety lotnicze/ });
 
     const amount = within(row).getByText("-431,00 zł");
