@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TransactionsTable } from "@/components/transactions/TransactionsTable";
 import {
+  EXPENSE_EUR,
   EXPENSE_PLN,
   INCOME_PLN,
   TEST_TRANSACTIONS,
@@ -48,6 +49,17 @@ describe("TransactionsTable", () => {
       "-184,50 zł",
       "",
     ]);
+  });
+
+  it("shows the PLN amount and the original foreign amount in the amount cell of the row", () => {
+    renderTable([EXPENSE_EUR]);
+    const row = screen.getByRole("row", { name: /Bilety lotnicze/ });
+
+    const amount = within(row).getByText("-431,00 zł");
+    const original = within(row).getByText("(100,00 EUR)");
+
+    expect(amount.closest("td")).toBe(original.closest("td"));
+    expect(amount.closest("td")).toBe(row.children[3]);
   });
 
   it("keeps the full description in the title attribute", () => {

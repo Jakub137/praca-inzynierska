@@ -88,6 +88,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: replaceMock }),
 }));
 
+const SERVER_NOTE = "Kwotę w PLN wyliczy serwer po kursie z dnia transakcji.";
+
 const retryMock = vi.fn();
 
 function renderWithState(
@@ -271,6 +273,27 @@ describe("TransactionsView", () => {
     expect(
       screen.getByRole("button", { name: "+ Dodaj wydatek" }),
     ).toBeTruthy();
+  });
+
+  it("shows the NBP rate hint for a foreign currency in the create dialog and removes it for PLN", () => {
+    renderWithState({ status: "ready", page: makePage(TEST_TRANSACTIONS) });
+    fireEvent.click(screen.getByRole("button", { name: "+ Dodaj wydatek" }));
+    const dialog = screen.getByRole("dialog");
+
+    fillField(dialog, "Waluta", "EUR");
+
+    const hint = within(dialog).getByText(
+      `Kurs średni NBP z 17.11.2026: 4,3100. ${SERVER_NOTE}`,
+    );
+    expect(
+      within(dialog)
+        .getByLabelText("Kwota transakcji *")
+        .getAttribute("aria-describedby"),
+    ).toBe(hint.id);
+
+    fillField(dialog, "Waluta", "PLN");
+
+    expect(within(dialog).queryByText(/NBP/)).toBeNull();
   });
 
   it("posts the transaction, closes the dialog, reloads the list and then shows the toast", async () => {
