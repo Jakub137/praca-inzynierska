@@ -30,6 +30,12 @@ public final class ErrorMessages {
 	public static final Text CATEGORY_TYPE_MISMATCH = new Text(
 			"Nieprawidłowa kategoria",
 			"Typ kategorii nie zgadza się z typem transakcji. Wybierz kategorię wydatków dla wydatku albo kategorię przychodów dla przychodu.");
+	public static final Text BUDGET_CATEGORY_NOT_EXPENSE = new Text(
+			"Nieprawidłowa kategoria",
+			"Limit miesięczny można ustawić tylko dla kategorii wydatków. Wybierz kategorię wydatków.");
+	public static final Text BUDGET_LIMIT_CONFLICT = new Text(
+			"Konflikt danych",
+			"Limit dla tej kategorii i miesiąca został właśnie zapisany. Odśwież dane i spróbuj ponownie.");
 	public static final Text AMOUNT_PLN_LIMIT_EXCEEDED = new Text(
 			"Błąd walidacji",
 			"Kwota po przeliczeniu na PLN przekracza dopuszczalny limit. Wpisz mniejszą kwotę.");

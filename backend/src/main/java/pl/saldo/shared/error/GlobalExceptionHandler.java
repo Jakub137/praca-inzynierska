@@ -22,6 +22,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import jakarta.servlet.http.HttpServletRequest;
+import pl.saldo.budget.domain.BudgetCategoryNotExpenseException;
+import pl.saldo.budget.domain.BudgetLimitConflictException;
 import pl.saldo.category.domain.CategoryAlreadyExistsException;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
 import pl.saldo.transaction.domain.AmountPlnLimitExceededException;
@@ -88,6 +90,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(CategoryTypeMismatchException.class)
 	public ProblemDetail handleCategoryTypeMismatch() {
 		return problem(HttpStatus.BAD_REQUEST, ErrorMessages.CATEGORY_TYPE_MISMATCH);
+	}
+
+	// Same status as CategoryTypeMismatchException (400): the request is well-formed but names a wrong category type.
+	@ExceptionHandler(BudgetCategoryNotExpenseException.class)
+	public ProblemDetail handleBudgetCategoryNotExpense() {
+		return problem(HttpStatus.BAD_REQUEST, ErrorMessages.BUDGET_CATEGORY_NOT_EXPENSE);
+	}
+
+	@ExceptionHandler(BudgetLimitConflictException.class)
+	public ProblemDetail handleBudgetLimitConflict() {
+		return problem(HttpStatus.CONFLICT, ErrorMessages.BUDGET_LIMIT_CONFLICT);
 	}
 
 	@ExceptionHandler(AmountPlnLimitExceededException.class)
