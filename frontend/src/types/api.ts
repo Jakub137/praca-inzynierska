@@ -156,3 +156,22 @@ export type BudgetLimitResponse = {
   readonly year: number;
   readonly limitAmount: number;
 };
+
+export type GoalStatus = "ACTIVE" | "COMPLETED";
+
+// One position of GET /api/v1/savings-goals (SavingsGoalResponse).
+export type SavingsGoalResponse = {
+  readonly id: number;
+  readonly name: string;
+  // Display only: amounts are BigDecimal in the backend, never summed or compared here.
+  readonly targetAmount: number;
+  readonly currentAmount: number;
+  // Calendar date "RRRR-MM-DD".
+  readonly targetDate: string;
+  // Computed by the backend (currentAmount >= targetAmount), not a stored column.
+  readonly status: GoalStatus;
+  // Never negative: 0 means both "within a month" and "deadline passed".
+  readonly monthsRemaining: number;
+  // Remaining amount divided by monthsRemaining; the whole remaining amount when monthsRemaining is 0.
+  readonly monthlyContribution: number;
+};
