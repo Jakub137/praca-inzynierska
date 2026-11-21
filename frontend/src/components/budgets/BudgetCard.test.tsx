@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { BudgetCard } from "@/components/budgets/BudgetCard";
 import {
   EXCEEDED_USAGE,
@@ -87,4 +87,33 @@ describe("BudgetCard", () => {
       expect(bar.firstElementChild?.className).toContain(fillClass);
     },
   );
+
+  it("has no edit button without a handler", () => {
+    render(<BudgetCard usage={NORMAL_USAGE} />);
+
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("names the edit button after the category and marks it for the focus restore", () => {
+    render(<BudgetCard usage={WARNING_USAGE} onEdit={vi.fn()} />);
+
+    const button = screen.getByRole("button", {
+      name: "Edytuj limit: Rozrywka",
+    });
+    expect(button.textContent).toBe("Edytuj limit");
+    expect(button.getAttribute("data-edit-for")).toBe("2");
+    expect(button.getAttribute("type")).toBe("button");
+  });
+
+  it("passes the usage and the clicked button to the handler", () => {
+    const onEdit = vi.fn();
+    render(<BudgetCard usage={WARNING_USAGE} onEdit={onEdit} />);
+
+    const button = screen.getByRole("button", {
+      name: "Edytuj limit: Rozrywka",
+    });
+    fireEvent.click(button);
+
+    expect(onEdit).toHaveBeenCalledWith(WARNING_USAGE, button);
+  });
 });

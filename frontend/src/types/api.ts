@@ -136,3 +136,23 @@ export type BudgetUsageResponse = {
   // The 80% and 100% thresholds live in the backend: the status is never recalculated here.
   readonly status: BudgetStatus;
 };
+
+// Request body of POST /api/v1/budget-limits (SetBudgetLimitCommand).
+export type SetBudgetLimitRequest = {
+  readonly categoryId: number;
+  // 1-12
+  readonly month: number;
+  // 2000-2100
+  readonly year: number;
+  // At most 10 integer and 2 fraction digits, so the JSON number keeps the exact decimal value.
+  readonly limitAmount: number;
+};
+
+// Response of POST /api/v1/budget-limits (BudgetLimitResponse): 201 for a new limit, 200 for a changed one.
+export type BudgetLimitResponse = {
+  readonly id: number;
+  readonly categoryId: number;
+  readonly month: number;
+  readonly year: number;
+  readonly limitAmount: number;
+};

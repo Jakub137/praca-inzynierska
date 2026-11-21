@@ -2,17 +2,27 @@ import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon";
 import { CheckIcon } from "@/components/icons/CheckIcon";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { BUDGET_STATUS_PRESENTATION } from "@/lib/budgets/status";
+import { FOCUS_RING } from "@/lib/focusRing";
 import { formatPercent, formatPln } from "@/lib/format/money";
 import type { BudgetUsageResponse } from "@/types/api";
 
 // The API percentage is already on a 0-100 scale; no amount is recalculated here.
 const PERCENTAGE_SCALE_MAX = 100;
 
+const EDIT_LABEL = "Edytuj limit";
+
+// The clicked button is passed on so that the dialog can return the focus to it.
+export type BudgetEditHandler = (
+  usage: BudgetUsageResponse,
+  opener: HTMLElement,
+) => void;
+
 type BudgetCardProps = {
   usage: BudgetUsageResponse;
+  onEdit?: BudgetEditHandler;
 };
 
-export function BudgetCard({ usage }: BudgetCardProps) {
+export function BudgetCard({ usage, onEdit }: BudgetCardProps) {
   const { categoryName, limitAmount, spentAmount, percentage, status } = usage;
   const presentation = BUDGET_STATUS_PRESENTATION[status];
   const StatusIcon = status === "NORMAL" ? CheckIcon : AlertCircleIcon;
@@ -42,6 +52,17 @@ export function BudgetCard({ usage }: BudgetCardProps) {
         <StatusIcon className="size-4 shrink-0" />
         {presentation.label}
       </p>
+      {onEdit !== undefined && (
+        <button
+          type="button"
+          aria-label={`${EDIT_LABEL}: ${categoryName}`}
+          data-edit-for={usage.categoryId}
+          onClick={(event) => onEdit(usage, event.currentTarget)}
+          className={`min-h-11 self-start rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
+        >
+          {EDIT_LABEL}
+        </button>
+      )}
     </article>
   );
 }

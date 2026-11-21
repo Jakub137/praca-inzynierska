@@ -13,6 +13,9 @@ vi.mock("@/hooks/useBudgetUsage", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
+vi.mock("@/hooks/useToast", () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
 
 async function renderPage(
   searchParams: Record<string, string | string[] | undefined> = {},
