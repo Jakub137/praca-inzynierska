@@ -1,5 +1,6 @@
 import { CheckIcon } from "@/components/icons/CheckIcon";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { FOCUS_RING } from "@/lib/focusRing";
 import { formatPercent, formatPln } from "@/lib/format/money";
 import { buildDeadlineText } from "@/lib/goals/deadline";
 import { buildProgressHint } from "@/lib/goals/hint";
@@ -9,13 +10,22 @@ import type { SavingsGoalResponse } from "@/types/api";
 // The percentage can exceed 100 after an overpayment; the bar clamps it.
 const PERCENTAGE_SCALE_MAX = 100;
 
+const DEPOSIT_LABEL = "+ Wpłać kwotę";
+
+// The clicked button is passed on so that the dialog can return the focus to it.
+export type GoalDepositHandler = (
+  goal: SavingsGoalResponse,
+  opener: HTMLElement,
+) => void;
+
 type GoalCardProps = {
   goal: SavingsGoalResponse;
   // Calendar day "RRRR-MM-DD" used to tell a passed deadline from one within a month.
   today: string;
+  onDeposit?: GoalDepositHandler;
 };
 
-export function GoalCard({ goal, today }: GoalCardProps) {
+export function GoalCard({ goal, today, onDeposit }: GoalCardProps) {
   const { name, targetAmount, currentAmount, status } = goal;
   const isCompleted = status === "COMPLETED";
   const percent = calculateProgressPercent(currentAmount, targetAmount);
@@ -46,6 +56,17 @@ export function GoalCard({ goal, today }: GoalCardProps) {
         </p>
       )}
       <p className="text-sm text-muted">{buildProgressHint(goal, percent)}</p>
+      {onDeposit !== undefined && (
+        <button
+          type="button"
+          aria-label={`Wpłać kwotę: ${name}`}
+          data-edit-for={goal.id}
+          onClick={(event) => onDeposit(goal, event.currentTarget)}
+          className={`min-h-11 self-start rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
+        >
+          {DEPOSIT_LABEL}
+        </button>
+      )}
     </article>
   );
 }

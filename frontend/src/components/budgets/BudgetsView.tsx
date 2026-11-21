@@ -15,11 +15,10 @@ import { type BudgetUsageState, useBudgetUsage } from "@/hooks/useBudgetUsage";
 import { useEditFocusRestore } from "@/hooks/useEditFocusRestore";
 import { useSetBudgetLimit } from "@/hooks/useSetBudgetLimit";
 import { monthToBudgetPeriod } from "@/lib/budgets/period";
+import { PRIMARY_ACTION } from "@/lib/buttonStyles";
 import { FOCUS_RING } from "@/lib/focusRing";
 import type { MonthOption } from "@/lib/transactions/months";
 import type { BudgetUsageResponse } from "@/types/api";
-
-const PRIMARY_ACTION = `inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline ${FOCUS_RING}`;
 
 const NO_CATEGORY_IDS: readonly number[] = [];
 

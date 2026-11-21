@@ -11,6 +11,10 @@ vi.mock("@/hooks/useSavingsGoals", () => ({
   useSavingsGoals: useSavingsGoalsMock,
 }));
 
+vi.mock("@/hooks/useToast", () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 describe("GoalsPage", () => {
   beforeEach(() => {
     useSavingsGoalsMock.mockReset();

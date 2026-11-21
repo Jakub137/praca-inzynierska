@@ -175,3 +175,17 @@ export type SavingsGoalResponse = {
   // Remaining amount divided by monthsRemaining; the whole remaining amount when monthsRemaining is 0.
   readonly monthlyContribution: number;
 };
+
+// Body of POST /api/v1/savings-goals (SavingsGoalCommand).
+export type SavingsGoalRequest = {
+  readonly name: string;
+  // At most 10 integer and 2 fraction digits, so the JSON number keeps the exact decimal value.
+  readonly targetAmount: number;
+  // Calendar date "RRRR-MM-DD": after today (Europe/Warsaw) and not later than 2100-12-31.
+  readonly targetDate: string;
+};
+
+// Body of POST /api/v1/savings-goals/{id}/deposit (DepositToGoalCommand).
+export type DepositToGoalRequest = {
+  readonly amount: number;
+};
