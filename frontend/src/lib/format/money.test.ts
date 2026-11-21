@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatForeignAmount,
+  formatPercent,
   formatPln,
   formatSignedPln,
 } from "@/lib/format/money";
@@ -35,5 +36,18 @@ describe("formatSignedPln", () => {
   it("takes the sign from the type, not from the number", () => {
     expect(formatSignedPln(-184.5, "EXPENSE")).toBe("-184,50 zł");
     expect(formatSignedPln(-7500, "INCOME")).toBe(`+7${NBSP}500,00 zł`);
+  });
+});
+
+describe("formatPercent", () => {
+  it.each([
+    [76, "76%"],
+    [99.6, "99%"],
+    [99.99, "99%"],
+    [100, "100%"],
+    [0.4, "0%"],
+    [184.2, "184%"],
+  ])("shows %s as %s (truncated, no rounding up)", (value, expected) => {
+    expect(formatPercent(value)).toBe(expected);
   });
 });
