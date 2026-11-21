@@ -25,6 +25,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import pl.saldo.goal.usecase.CreateSavingsGoalUseCase;
 import pl.saldo.goal.usecase.DeleteSavingsGoalUseCase;
+import pl.saldo.goal.usecase.DepositToGoalCommand;
+import pl.saldo.goal.usecase.DepositToGoalUseCase;
 import pl.saldo.goal.usecase.GetSavingsGoalsUseCase;
 import pl.saldo.goal.usecase.SavingsGoalCommand;
 import pl.saldo.goal.usecase.UpdateSavingsGoalUseCase;
@@ -39,16 +41,19 @@ public class SavingsGoalController {
 	private final CreateSavingsGoalUseCase createSavingsGoalUseCase;
 	private final UpdateSavingsGoalUseCase updateSavingsGoalUseCase;
 	private final DeleteSavingsGoalUseCase deleteSavingsGoalUseCase;
+	private final DepositToGoalUseCase depositToGoalUseCase;
 
 	public SavingsGoalController(
 			GetSavingsGoalsUseCase getSavingsGoalsUseCase,
 			CreateSavingsGoalUseCase createSavingsGoalUseCase,
 			UpdateSavingsGoalUseCase updateSavingsGoalUseCase,
-			DeleteSavingsGoalUseCase deleteSavingsGoalUseCase) {
+			DeleteSavingsGoalUseCase deleteSavingsGoalUseCase,
+			DepositToGoalUseCase depositToGoalUseCase) {
 		this.getSavingsGoalsUseCase = getSavingsGoalsUseCase;
 		this.createSavingsGoalUseCase = createSavingsGoalUseCase;
 		this.updateSavingsGoalUseCase = updateSavingsGoalUseCase;
 		this.deleteSavingsGoalUseCase = deleteSavingsGoalUseCase;
+		this.depositToGoalUseCase = depositToGoalUseCase;
 	}
 
 	@GetMapping
@@ -138,6 +143,42 @@ public class SavingsGoalController {
 	public ResponseEntity<SavingsGoalResponse> updateSavingsGoal(@AuthenticationPrincipal UserPrincipal principal,
 			@PathVariable Long id, @Valid @RequestBody SavingsGoalCommand command) {
 		return ResponseEntity.ok(updateSavingsGoalUseCase.execute(principal.id(), id, command));
+	}
+
+	@PostMapping("/{id}/deposit")
+	@Operation(
+			summary = "Wpłata na cel oszczędnościowy",
+			description = "Zwiększa zebraną kwotę celu o podaną kwotę i zwraca cel po wpłacie (kwoty, status, miesiące "
+					+ "do terminu i rekomendowaną wpłatę miesięczną). Cel ma status COMPLETED, gdy zebrana kwota jest "
+					+ "równa kwocie docelowej lub większa; wpłata na osiągnięty cel jest dozwolona (nadpłata). Suma "
+					+ "wpłat na cel nie może przekroczyć 9 999 999 999,99. Cudzy lub nieistniejący cel daje 404.")
+	@ApiResponses({
+			@ApiResponse(
+					responseCode = "200",
+					description = "Cel po wpłacie",
+					content = @Content(schema = @Schema(implementation = SavingsGoalResponse.class))),
+			@ApiResponse(
+					responseCode = "400",
+					description = "Błędna kwota albo suma wpłat ponad limit (fieldErrors[amount]) lub identyfikator nie jest liczbą",
+					content = @Content(
+							mediaType = "application/problem+json",
+							schema = @Schema(implementation = ProblemDetail.class))),
+			@ApiResponse(
+					responseCode = "401",
+					description = "Brak tokena, token nieprawidłowy lub wygasły",
+					content = @Content(
+							mediaType = "application/problem+json",
+							schema = @Schema(implementation = ProblemDetail.class))),
+			@ApiResponse(
+					responseCode = "404",
+					description = "Cel nie istnieje albo należy do innego użytkownika",
+					content = @Content(
+							mediaType = "application/problem+json",
+							schema = @Schema(implementation = ProblemDetail.class)))
+	})
+	public ResponseEntity<SavingsGoalResponse> depositToGoal(@AuthenticationPrincipal UserPrincipal principal,
+			@PathVariable Long id, @Valid @RequestBody DepositToGoalCommand command) {
+		return ResponseEntity.ok(depositToGoalUseCase.execute(principal.id(), id, command));
 	}
 
 	@DeleteMapping("/{id}")

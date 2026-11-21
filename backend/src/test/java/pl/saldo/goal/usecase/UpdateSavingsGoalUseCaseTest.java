@@ -10,7 +10,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +23,6 @@ import pl.saldo.goal.api.SavingsGoalResponse;
 import pl.saldo.goal.domain.GoalStatus;
 import pl.saldo.goal.domain.InvalidSavingsGoalException;
 import pl.saldo.goal.domain.SavingsGoalEntity;
-import pl.saldo.goal.infrastructure.SavingsGoalRepository;
 import pl.saldo.shared.error.ResourceNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,13 +35,13 @@ class UpdateSavingsGoalUseCaseTest {
 	private static final LocalDate FUTURE_DATE = LocalDate.of(2027, 7, 15);
 
 	@Mock
-	private SavingsGoalRepository savingsGoalRepository;
+	private OwnedSavingsGoalFinder ownedSavingsGoalFinder;
 
 	private UpdateSavingsGoalUseCase useCase;
 
 	@BeforeEach
 	void setUp() {
-		useCase = new UpdateSavingsGoalUseCase(savingsGoalRepository, Clock.fixed(NOW, ZoneOffset.UTC));
+		useCase = new UpdateSavingsGoalUseCase(ownedSavingsGoalFinder, Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 	@Test
@@ -60,8 +58,8 @@ class UpdateSavingsGoalUseCaseTest {
 		assertThat(response).isEqualTo(new SavingsGoalResponse(
 				ID, "Samochód", new BigDecimal("9000.00"), new BigDecimal("1500.00"), LocalDate.of(2027, 11, 20),
 				GoalStatus.ACTIVE, 12, new BigDecimal("625.00")));
-		then(savingsGoalRepository).should().findByIdAndUserId(ID, USER_ID);
-		then(savingsGoalRepository).shouldHaveNoMoreInteractions();
+		then(ownedSavingsGoalFinder).should().findOwnedForUpdate(ID, USER_ID);
+		then(ownedSavingsGoalFinder).shouldHaveNoMoreInteractions();
 	}
 
 	@Test
@@ -113,7 +111,8 @@ class UpdateSavingsGoalUseCaseTest {
 
 	@Test
 	void shouldThrowNotFoundWhenGoalIsMissingOrForeign() {
-		given(savingsGoalRepository.findByIdAndUserId(ID, USER_ID)).willReturn(Optional.empty());
+		given(ownedSavingsGoalFinder.findOwnedForUpdate(ID, USER_ID))
+				.willThrow(new ResourceNotFoundException("Savings goal not found: " + ID));
 		SavingsGoalCommand command = new SavingsGoalCommand("Cel", new BigDecimal("1.00"), FUTURE_DATE);
 
 		assertThatThrownBy(() -> useCase.execute(USER_ID, ID, command)).isInstanceOf(ResourceNotFoundException.class);
@@ -123,7 +122,7 @@ class UpdateSavingsGoalUseCaseTest {
 		SavingsGoalEntity goal = new SavingsGoalEntity(USER_ID, "Wakacje", new BigDecimal("6000.00"), targetDate, NOW);
 		ReflectionTestUtils.setField(goal, "id", ID);
 		ReflectionTestUtils.setField(goal, "currentAmount", new BigDecimal(currentAmount));
-		given(savingsGoalRepository.findByIdAndUserId(ID, USER_ID)).willReturn(Optional.of(goal));
+		given(ownedSavingsGoalFinder.findOwnedForUpdate(ID, USER_ID)).willReturn(goal);
 		return goal;
 	}
 
