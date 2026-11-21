@@ -28,6 +28,8 @@ import pl.saldo.budget.domain.InvalidBudgetUsageQueryException;
 import pl.saldo.category.domain.CategoryAlreadyExistsException;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
 import pl.saldo.goal.domain.InvalidSavingsGoalException;
+import pl.saldo.recurring.domain.InvalidRecurringPaymentException;
+import pl.saldo.recurring.domain.RecurringPaymentCategoryNotExpenseException;
 import pl.saldo.transaction.domain.AmountPlnLimitExceededException;
 import pl.saldo.transaction.domain.CategoryTypeMismatchException;
 import pl.saldo.transaction.domain.InvalidTransactionQueryException;
@@ -129,6 +131,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.VALIDATION);
 		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
 		return problem;
+	}
+
+	@ExceptionHandler(InvalidRecurringPaymentException.class)
+	public ProblemDetail handleInvalidRecurringPayment(InvalidRecurringPaymentException ex) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.VALIDATION);
+		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
+		return problem;
+	}
+
+	// Same status as BudgetCategoryNotExpenseException (400): the request is well-formed but names a wrong category type.
+	@ExceptionHandler(RecurringPaymentCategoryNotExpenseException.class)
+	public ProblemDetail handleRecurringPaymentCategoryNotExpense() {
+		return problem(HttpStatus.BAD_REQUEST, ErrorMessages.RECURRING_PAYMENT_CATEGORY_NOT_EXPENSE);
 	}
 
 	@ExceptionHandler(ExchangeRateUnavailableException.class)
