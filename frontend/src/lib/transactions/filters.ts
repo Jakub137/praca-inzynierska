@@ -40,7 +40,7 @@ function parsePage(value: RawValue): number {
   return page !== null && page <= MAX_PAGE_NUMBER ? page : FIRST_PAGE;
 }
 
-function parseMonth(
+export function parseMonth(
   value: RawValue,
   validMonths: readonly string[],
 ): string | null {

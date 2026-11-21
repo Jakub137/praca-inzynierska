@@ -121,3 +121,18 @@ export type CreateTransactionRequest = {
 
 // PUT replaces all fields, so it takes the same body as POST.
 export type UpdateTransactionRequest = CreateTransactionRequest;
+
+export type BudgetStatus = "NORMAL" | "WARNING" | "EXCEEDED";
+
+// One position of GET /api/v1/budget-limits/usage (BudgetUsageResponse).
+export type BudgetUsageResponse = {
+  readonly categoryId: number;
+  readonly categoryName: string;
+  // Display only: amounts and the percentage are calculated by the backend (BigDecimal), never here.
+  readonly limitAmount: number;
+  readonly spentAmount: number;
+  // Can exceed 100.
+  readonly percentage: number;
+  // The 80% and 100% thresholds live in the backend: the status is never recalculated here.
+  readonly status: BudgetStatus;
+};
