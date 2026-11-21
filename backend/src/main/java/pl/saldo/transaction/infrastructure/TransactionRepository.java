@@ -1,5 +1,8 @@
 package pl.saldo.transaction.infrastructure;
 
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -26,5 +29,23 @@ public interface TransactionRepository
 	@Override
 	@EntityGraph(attributePaths = "category")
 	Page<TransactionEntity> findAll(Specification<TransactionEntity> spec, Pageable pageable);
+
+	// SUM runs in SQL. The range is half-open [startDate, endDate), so the column stays comparable directly and
+	// idx_transactions_user_date can be used (no month extraction). The user filter is essential: system
+	// categories are shared by all users. Categories without expenses are absent from the result.
+	@Query("""
+			select new pl.saldo.transaction.infrastructure.CategorySpending(t.category.id, sum(t.amountPln))
+			from TransactionEntity t
+			where t.userId = :userId
+				and t.category.id in :categoryIds
+				and t.type = pl.saldo.transaction.domain.TransactionType.EXPENSE
+				and t.transactionDate >= :startDate
+				and t.transactionDate < :endDate
+			group by t.category.id""")
+	List<CategorySpending> sumExpensesByCategory(
+			@Param("userId") UUID userId,
+			@Param("categoryIds") Collection<Long> categoryIds,
+			@Param("startDate") LocalDate startDate,
+			@Param("endDate") LocalDate endDate);
 
 }

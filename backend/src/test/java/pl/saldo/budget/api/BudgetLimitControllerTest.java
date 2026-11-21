@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.then;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,11 +26,16 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import pl.saldo.budget.domain.BudgetCategoryNotExpenseException;
 import pl.saldo.budget.domain.BudgetLimitConflictException;
+import pl.saldo.budget.domain.BudgetStatus;
+import pl.saldo.budget.domain.InvalidBudgetUsageQueryException;
+import pl.saldo.budget.usecase.GetBudgetUsageQuery;
+import pl.saldo.budget.usecase.GetBudgetUsageUseCase;
 import pl.saldo.budget.usecase.SetBudgetLimitCommand;
 import pl.saldo.budget.usecase.SetBudgetLimitResult;
 import pl.saldo.budget.usecase.SetBudgetLimitUseCase;
 import pl.saldo.currency.domain.SupportedCurrency;
 import pl.saldo.shared.config.ClockConfiguration;
+import pl.saldo.shared.error.ApiFieldError;
 import pl.saldo.shared.error.ResourceNotFoundException;
 import pl.saldo.shared.security.JwtService;
 import pl.saldo.shared.security.SecurityConfiguration;
@@ -51,12 +57,19 @@ class BudgetLimitControllerTest {
 			new SetBudgetLimitCommand(1L, 11, 2026, new BigDecimal("1500.00"));
 	private static final BudgetLimitResponse RESPONSE =
 			new BudgetLimitResponse(7L, 1L, 11, 2026, new BigDecimal("1500.00"));
+	private static final String USAGE_URI = LIMITS_URI + "/usage";
+	private static final BudgetUsageResponse USAGE = new BudgetUsageResponse(
+			1L, "Rozrywka", new BigDecimal("1000.00"), new BigDecimal("850.00"), new BigDecimal("85.00"),
+			BudgetStatus.WARNING);
 
 	@Autowired
 	private MockMvcTester mvc;
 
 	@MockitoBean
 	private SetBudgetLimitUseCase setBudgetLimitUseCase;
+
+	@MockitoBean
+	private GetBudgetUsageUseCase getBudgetUsageUseCase;
 
 	@MockitoBean
 	private JwtService jwtService;
@@ -199,11 +212,80 @@ class BudgetLimitControllerTest {
 		assertThat(result).bodyText().doesNotContain("duplicate key");
 	}
 
+	@Test
+	void shouldReturn200WithUsageItemsForGivenMonth() {
+		authenticate();
+		given(getBudgetUsageUseCase.execute(USER_ID, new GetBudgetUsageQuery(11, 2026))).willReturn(List.of(USAGE));
+
+		MvcTestResult result = getUsage("?month=11&year=2026");
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyJson().extractingPath("$[0].categoryId").isEqualTo(1);
+		assertThat(result).bodyJson().extractingPath("$[0].categoryName").isEqualTo("Rozrywka");
+		assertThat(result).bodyJson().extractingPath("$[0].limitAmount").isEqualTo(1000.0);
+		assertThat(result).bodyJson().extractingPath("$[0].spentAmount").isEqualTo(850.0);
+		assertThat(result).bodyJson().extractingPath("$[0].percentage").isEqualTo(85.0);
+		assertThat(result).bodyJson().extractingPath("$[0].status").isEqualTo("WARNING");
+		assertThat(result).bodyJson().doesNotHavePath("$[0].userId");
+	}
+
+	@Test
+	void shouldPassEmptyQueryToUseCaseWhenNoParametersAreGiven() {
+		authenticate();
+		given(getBudgetUsageUseCase.execute(USER_ID, new GetBudgetUsageQuery(null, null))).willReturn(List.of());
+
+		MvcTestResult result = getUsage("");
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyText().isEqualTo("[]");
+	}
+
+	@Test
+	void shouldReturn401ForUsageWithoutTokenAndNotCallUseCase() {
+		MvcTestResult result = mvc.get().uri(USAGE_URI).exchange();
+
+		assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+		then(getBudgetUsageUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WithFieldErrorsWhenUseCaseRejectsParameters() {
+		authenticate();
+		given(getBudgetUsageUseCase.execute(USER_ID, new GetBudgetUsageQuery(11, null)))
+				.willThrow(new InvalidBudgetUsageQueryException(
+						List.of(new ApiFieldError("year", "Rok jest wymagany, gdy podano miesiąc"))));
+
+		MvcTestResult result = getUsage("?month=11");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.title").isEqualTo("Błąd walidacji");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("year");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message")
+				.isEqualTo("Rok jest wymagany, gdy podano miesiąc");
+		assertThat(result).bodyJson().hasPath("$.timestamp");
+	}
+
+	@Test
+	void shouldReturn400WhenMonthIsNotANumber() {
+		authenticate();
+
+		MvcTestResult result = getUsage("?month=abc&year=2026");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		then(getBudgetUsageUseCase).shouldHaveNoInteractions();
+	}
+
 	private MvcTestResult setLimit(String body) {
 		return mvc.post().uri(LIMITS_URI)
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(body)
+				.exchange();
+	}
+
+	private MvcTestResult getUsage(String query) {
+		return mvc.get().uri(USAGE_URI + query)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TOKEN)
 				.exchange();
 	}
 
