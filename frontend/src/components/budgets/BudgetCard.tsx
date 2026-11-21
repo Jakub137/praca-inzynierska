@@ -1,9 +1,12 @@
-import { BudgetProgressBar } from "@/components/budgets/BudgetProgressBar";
 import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon";
 import { CheckIcon } from "@/components/icons/CheckIcon";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { BUDGET_STATUS_PRESENTATION } from "@/lib/budgets/status";
 import { formatPercent, formatPln } from "@/lib/format/money";
 import type { BudgetUsageResponse } from "@/types/api";
+
+// The API percentage is already on a 0-100 scale; no amount is recalculated here.
+const PERCENTAGE_SCALE_MAX = 100;
 
 type BudgetCardProps = {
   usage: BudgetUsageResponse;
@@ -26,10 +29,11 @@ export function BudgetCard({ usage }: BudgetCardProps) {
         {categoryName}
       </h2>
       <p className="text-sm text-muted">{`${spent} / ${limit} (${percent})`}</p>
-      <BudgetProgressBar
+      <ProgressBar
         label={`Wykorzystanie limitu: ${categoryName}`}
-        percentage={percentage}
-        status={status}
+        value={percentage}
+        max={PERCENTAGE_SCALE_MAX}
+        tone={presentation.tone}
         valueText={`${spent} z ${limit}, ${percent}, ${presentation.spokenLabel}`}
       />
       <p

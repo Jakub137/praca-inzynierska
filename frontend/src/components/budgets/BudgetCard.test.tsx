@@ -17,6 +17,7 @@ const CASES = [
     summary: `1${NBSP}140,00 zł / 1${NBSP}500,00 zł (76%)`,
     label: "W normie",
     valueText: `1${NBSP}140,00 zł z 1${NBSP}500,00 zł, 76%, w normie`,
+    fillClass: "bg-brand",
   },
   {
     name: "WARNING",
@@ -24,6 +25,7 @@ const CASES = [
     summary: `996,00 zł / 1${NBSP}000,00 zł (99%)`,
     label: "Zbliżasz się do limitu",
     valueText: `996,00 zł z 1${NBSP}000,00 zł, 99%, ostrzeżenie`,
+    fillClass: "bg-warning",
   },
   {
     name: "EXCEEDED",
@@ -31,6 +33,7 @@ const CASES = [
     summary: "921,00 zł / 500,00 zł (184%)",
     label: "Przekroczono limit",
     valueText: "921,00 zł z 500,00 zł, 184%, limit przekroczony",
+    fillClass: "bg-danger",
   },
 ];
 
@@ -72,6 +75,16 @@ describe("BudgetCard", () => {
         name: `Wykorzystanie limitu: ${usage.categoryName}`,
       });
       expect(bar.getAttribute("aria-valuetext")).toBe(valueText);
+    },
+  );
+
+  it.each(CASES)(
+    "colours the progress bar for $name with $fillClass",
+    ({ usage, fillClass }) => {
+      render(<BudgetCard usage={usage} />);
+
+      const bar = screen.getByRole("progressbar");
+      expect(bar.firstElementChild?.className).toContain(fillClass);
     },
   );
 });
