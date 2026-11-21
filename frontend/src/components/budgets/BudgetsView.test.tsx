@@ -1,16 +1,35 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { BudgetsView } from "@/components/budgets/BudgetsView";
 import type {
   BudgetUsageState,
   UseBudgetUsageResult,
 } from "@/hooks/useBudgetUsage";
-import { TEST_BUDGET_USAGE } from "@/test-utils/budgets";
+import type { CategoriesState } from "@/hooks/useCategories";
+import type { SetBudgetLimitResult } from "@/lib/api/budgets";
+import { ApiError } from "@/lib/api/errors";
+import { NORMAL_USAGE, TEST_BUDGET_USAGE } from "@/test-utils/budgets";
+import { TEST_CATEGORIES } from "@/test-utils/categories";
+import { installDialogStub } from "@/test-utils/dialog";
 import { TEST_MONTH_OPTIONS } from "@/test-utils/transactions";
+import type { SetBudgetLimitRequest } from "@/types/api";
 
 const useBudgetUsageMock = vi.hoisted(() =>
   vi.fn<(month: string | null) => UseBudgetUsageResult>(),
 );
+const useCategoriesMock = vi.hoisted(() => vi.fn<() => CategoriesState>());
+const setBudgetLimitMock = vi.hoisted(() =>
+  vi.fn<
+    (
+      token: string,
+      request: SetBudgetLimitRequest,
+    ) => Promise<SetBudgetLimitResult>
+  >(),
+);
+const readSessionTokenMock = vi.hoisted(() =>
+  vi.fn<() => string | undefined>(),
+);
+const showToastMock = vi.hoisted(() => vi.fn<(message: string) => void>());
 const pushMock = vi.hoisted(() =>
   vi.fn<(href: string, options?: { scroll: boolean }) => void>(),
 );
@@ -18,9 +37,25 @@ const pushMock = vi.hoisted(() =>
 vi.mock("@/hooks/useBudgetUsage", () => ({
   useBudgetUsage: useBudgetUsageMock,
 }));
+vi.mock("@/hooks/useCategories", () => ({
+  useCategories: useCategoriesMock,
+}));
+vi.mock("@/lib/api/budgets", () => ({
+  setBudgetLimit: setBudgetLimitMock,
+}));
+vi.mock("@/lib/auth/session", () => ({
+  readSessionToken: readSessionTokenMock,
+}));
+vi.mock("@/hooks/useToast", () => ({
+  useToast: () => ({ showToast: showToastMock }),
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
 }));
+
+function viewElement(month: string | null) {
+  return <BudgetsView month={month} monthOptions={TEST_MONTH_OPTIONS} />;
+}
 
 function renderView(
   state: BudgetUsageState,
@@ -28,9 +63,7 @@ function renderView(
   retry: () => void = vi.fn(),
 ) {
   useBudgetUsageMock.mockReturnValue({ state, retry });
-  return render(
-    <BudgetsView month={month} monthOptions={TEST_MONTH_OPTIONS} />,
-  );
+  return render(viewElement(month));
 }
 
 const READY: BudgetUsageState = { status: "ready", usage: TEST_BUDGET_USAGE };
@@ -131,5 +164,262 @@ describe("BudgetsView", () => {
     });
 
     expect(pushMock).toHaveBeenCalledWith("/budgets", { scroll: false });
+  });
+});
+
+describe("BudgetsView limit dialogs", () => {
+  const CATEGORY = "Kategoria *";
+  const AMOUNT = "Limit miesięczny (PLN) *";
+  const ALL_TAKEN_MESSAGE =
+    "Wszystkie kategorie wydatków mają już limit w tym miesiącu. Zmień istniejący limit przyciskiem Edytuj limit.";
+  const SAVED_LIMIT = {
+    id: 7,
+    categoryId: 2,
+    month: 11,
+    year: 2026,
+    limitAmount: 1200,
+  };
+  const CREATED: SetBudgetLimitResult = { created: true, limit: SAVED_LIMIT };
+  const UPDATED: SetBudgetLimitResult = { created: false, limit: SAVED_LIMIT };
+
+  beforeAll(installDialogStub);
+
+  beforeEach(() => {
+    useBudgetUsageMock.mockReset();
+    useCategoriesMock.mockReset();
+    setBudgetLimitMock.mockReset();
+    readSessionTokenMock.mockReset();
+    showToastMock.mockReset();
+    useCategoriesMock.mockReturnValue({
+      status: "ready",
+      categories: TEST_CATEGORIES,
+    });
+    readSessionTokenMock.mockReturnValue("token");
+  });
+
+  function openNewLimit() {
+    fireEvent.click(screen.getByRole("button", { name: "+ Nowy limit" }));
+  }
+
+  function openEdit(categoryName: string) {
+    fireEvent.click(
+      screen.getByRole("button", { name: `Edytuj limit: ${categoryName}` }),
+    );
+  }
+
+  function fill(label: string, value: string) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  }
+
+  async function save(name: string) {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name }));
+    });
+  }
+
+  it.each<BudgetUsageState>([
+    { status: "loading" },
+    { status: "error" },
+    READY,
+  ])(
+    "shows the new-limit button in every state except idle (case %#)",
+    (state) => {
+      renderView(state);
+
+      expect(screen.getByRole("button", { name: "+ Nowy limit" })).toBeTruthy();
+    },
+  );
+
+  it("puts an edit button named after the category on every card", () => {
+    renderView(READY);
+
+    for (const name of ["Artykuły spożywcze", "Rozrywka", "Paliwo"]) {
+      expect(
+        screen.getByRole("button", { name: `Edytuj limit: ${name}` }),
+      ).toBeTruthy();
+    }
+  });
+
+  it("offers only the expense categories that have no limit yet", () => {
+    renderView({ status: "ready", usage: [NORMAL_USAGE] });
+
+    openNewLimit();
+
+    const select = screen.getByLabelText(CATEGORY) as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.textContent)).toEqual([
+      "Wybierz kategorię",
+      "Rozrywka",
+    ]);
+  });
+
+  it("explains that every category has a limit and keeps the button active", () => {
+    renderView(READY);
+
+    const button = screen.getByRole("button", {
+      name: "+ Nowy limit",
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    openNewLimit();
+
+    expect(screen.getByText(ALL_TAKEN_MESSAGE)).toBeTruthy();
+    expect(screen.queryByLabelText(AMOUNT)).toBeNull();
+  });
+
+  it("saves a new limit for the month shown, reloads, shows the toast and keeps the focus on the add button", async () => {
+    setBudgetLimitMock.mockResolvedValue(CREATED);
+    const retry = vi.fn();
+    renderView({ status: "ready", usage: [NORMAL_USAGE] }, null, retry);
+
+    openNewLimit();
+    expect(
+      within(screen.getByRole("dialog", { name: "Nowy limit" })).getByText(
+        "Listopad 2026",
+      ),
+    ).toBeTruthy();
+    fill(CATEGORY, "2");
+    fill(AMOUNT, "1200");
+    await save("Zapisz limit");
+
+    expect(setBudgetLimitMock).toHaveBeenCalledWith("token", {
+      categoryId: 2,
+      month: 11,
+      year: 2026,
+      limitAmount: 1200,
+    });
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(showToastMock).toHaveBeenCalledWith("Dodano limit");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "+ Nowy limit" }),
+    );
+  });
+
+  it("sends the month from the address, not the default one", async () => {
+    setBudgetLimitMock.mockResolvedValue(CREATED);
+    renderView({ status: "ready", usage: [NORMAL_USAGE] }, "2026-10");
+
+    openNewLimit();
+    expect(
+      within(screen.getByRole("dialog", { name: "Nowy limit" })).getByText(
+        "Październik 2026",
+      ),
+    ).toBeTruthy();
+    fill(CATEGORY, "2");
+    fill(AMOUNT, "800,50");
+    await save("Zapisz limit");
+
+    expect(setBudgetLimitMock).toHaveBeenCalledWith("token", {
+      categoryId: 2,
+      month: 10,
+      year: 2026,
+      limitAmount: 800.5,
+    });
+  });
+
+  it("opens the edit dialog filled from the card and saves the same category", async () => {
+    setBudgetLimitMock.mockResolvedValue(UPDATED);
+    const retry = vi.fn();
+    renderView(READY, null, retry);
+
+    openEdit("Rozrywka");
+    const dialog = screen.getByRole("dialog", { name: "Edytuj limit" });
+    expect(within(dialog).getByText("Rozrywka")).toBeTruthy();
+    expect((screen.getByLabelText(AMOUNT) as HTMLInputElement).value).toBe(
+      "1000,00",
+    );
+    fill(AMOUNT, "1200");
+    await save("Zapisz zmiany");
+
+    expect(setBudgetLimitMock).toHaveBeenCalledWith("token", {
+      categoryId: 2,
+      month: 11,
+      year: 2026,
+      limitAmount: 1200,
+    });
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(showToastMock).toHaveBeenCalledWith("Zaktualizowano limit");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("returns the focus to the edit button of the same card once the usage is back", async () => {
+    setBudgetLimitMock.mockResolvedValue(UPDATED);
+    const retry = vi.fn();
+    const { rerender } = renderView(READY, null, retry);
+
+    openEdit("Rozrywka");
+    fill(AMOUNT, "1200");
+    await save("Zapisz zmiany");
+
+    // The reload replaces the cards by the skeleton, and the focused button goes with them.
+    useBudgetUsageMock.mockReturnValue({ state: { status: "loading" }, retry });
+    rerender(viewElement(null));
+    expect(document.activeElement).toBe(document.body);
+
+    useBudgetUsageMock.mockReturnValue({ state: READY, retry });
+    rerender(viewElement(null));
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Edytuj limit: Rozrywka" }),
+    );
+  });
+
+  it("keeps the focus on the add button while the usage reloads after a new limit", async () => {
+    setBudgetLimitMock.mockResolvedValue(CREATED);
+    const retry = vi.fn();
+    const { rerender } = renderView(
+      { status: "ready", usage: [NORMAL_USAGE] },
+      null,
+      retry,
+    );
+
+    openNewLimit();
+    fill(CATEGORY, "2");
+    fill(AMOUNT, "1200");
+    await save("Zapisz limit");
+    const addButton = screen.getByRole("button", { name: "+ Nowy limit" });
+
+    useBudgetUsageMock.mockReturnValue({ state: { status: "loading" }, retry });
+    rerender(viewElement(null));
+    expect(document.activeElement).toBe(addButton);
+
+    useBudgetUsageMock.mockReturnValue({ state: READY, retry });
+    rerender(viewElement(null));
+    expect(document.activeElement).toBe(addButton);
+  });
+
+  it("keeps the dialog, the typed amount and the data when saving fails", async () => {
+    setBudgetLimitMock.mockRejectedValue(
+      new ApiError(409, {
+        status: 409,
+        detail: "Odśwież dane i spróbuj ponownie.",
+      }),
+    );
+    const retry = vi.fn();
+    renderView(READY, null, retry);
+
+    openEdit("Rozrywka");
+    fill(AMOUNT, "1200");
+    await save("Zapisz zmiany");
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Odśwież dane i spróbuj ponownie.",
+    );
+    expect(screen.getByRole("dialog", { name: "Edytuj limit" })).toBeTruthy();
+    expect((screen.getByLabelText(AMOUNT) as HTMLInputElement).value).toBe(
+      "1200",
+    );
+    expect(retry).not.toHaveBeenCalled();
+    expect(showToastMock).not.toHaveBeenCalled();
+  });
+
+  it("returns the focus to the edit button on Anuluj", () => {
+    renderView(READY);
+
+    openEdit("Rozrywka");
+    fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
+
+    expect(setBudgetLimitMock).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Edytuj limit: Rozrywka" }),
+    );
   });
 });

@@ -118,11 +118,11 @@ export function getSelectedType(
   return findCategory(categoryId, categories)?.type ?? DEFAULT_TYPE;
 }
 
-function parseAmount(raw: string): number {
+export function parseAmount(raw: string): number {
   return Number(raw.trim().replace(",", "."));
 }
 
-function validateAmount(raw: string): string | null {
+export function validateAmount(raw: string): string | null {
   const text = raw.trim();
   if (text === "") {
     return "Podaj kwotę.";

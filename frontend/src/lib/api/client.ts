@@ -75,10 +75,16 @@ async function parseProblem(
   }
 }
 
-export async function apiRequest<T>(
+export type ApiResult<T> = {
+  readonly status: number;
+  readonly data: T;
+};
+
+// Same as apiRequest, but also tells the success status (e.g. 201 created vs 200 updated).
+export async function apiRequestWithStatus<T>(
   path: string,
   options: RequestOptions = {},
-): Promise<T> {
+): Promise<ApiResult<T>> {
   const response = await send(`${getBaseUrl()}${path}`, options);
   if (!response.ok) {
     if (response.status === HTTP_UNAUTHORIZED && !isPublicAuthPath(path)) {
@@ -87,7 +93,15 @@ export async function apiRequest<T>(
     throw new ApiError(response.status, await parseProblem(response));
   }
   if (response.status === HTTP_NO_CONTENT) {
-    return undefined as T;
+    return { status: response.status, data: undefined as T };
   }
-  return (await response.json()) as T;
+  return { status: response.status, data: (await response.json()) as T };
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const { data } = await apiRequestWithStatus<T>(path, options);
+  return data;
 }

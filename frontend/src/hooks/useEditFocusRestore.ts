@@ -1,13 +1,17 @@
 import { type RefObject, useCallback, useEffect, useRef } from "react";
-import type { TransactionsState } from "@/hooks/useTransactions";
 
-// After an edit the list reloads and its rows are rebuilt, so the pencil that opened the dialog is gone.
-// Once the list is back, the focus goes to the pencil of the same transaction (data-edit-for).
-// When that row is not on the page anymore (a new date or the filters moved it) or the reload failed,
+// Any list state of the app: only the loading status matters here.
+type ListState = {
+  readonly status: "idle" | "loading" | "ready" | "error";
+};
+
+// After an edit the list reloads and its items are rebuilt, so the button that opened the dialog is gone.
+// Once the list is back, the focus goes to the edit button of the same item (data-edit-for).
+// When that item is not there anymore (a new date or the filters moved it) or the reload failed,
 // it goes to the fallback element. The request is cleared on the first settled state, so a later reload
 // never steals the focus.
 export function useEditFocusRestore(
-  state: TransactionsState,
+  state: ListState,
   fallbackRef: RefObject<HTMLElement | null>,
 ): (id: string) => void {
   const pendingIdRef = useRef<string | null>(null);
