@@ -1,3 +1,4 @@
+import type { ProgressBarTone } from "@/components/ui/ProgressBar";
 import type { BudgetStatus } from "@/types/api";
 
 export type BudgetStatusPresentation = {
@@ -5,7 +6,7 @@ export type BudgetStatusPresentation = {
   readonly label: string;
   // Read after the amounts in the aria-valuetext of the progress bar.
   readonly spokenLabel: string;
-  readonly barClass: string;
+  readonly tone: ProgressBarTone;
   readonly textClass: string;
 };
 
@@ -16,19 +17,19 @@ export const BUDGET_STATUS_PRESENTATION: Record<
   NORMAL: {
     label: "W normie",
     spokenLabel: "w normie",
-    barClass: "bg-brand",
+    tone: "brand",
     textClass: "text-ink",
   },
   WARNING: {
     label: "Zbliżasz się do limitu",
     spokenLabel: "ostrzeżenie",
-    barClass: "bg-warning",
+    tone: "warning",
     textClass: "text-warning",
   },
   EXCEEDED: {
     label: "Przekroczono limit",
     spokenLabel: "limit przekroczony",
-    barClass: "bg-danger",
+    tone: "danger",
     textClass: "text-danger",
   },
 };
