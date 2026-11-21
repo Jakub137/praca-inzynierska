@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { GoalCard } from "@/components/goals/GoalCard";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { GoalCard, type GoalDepositHandler } from "@/components/goals/GoalCard";
 import {
   ACTIVE_GOAL,
   COMPLETED_GOAL,
@@ -12,8 +12,13 @@ import {
 // formatPln groups thousands with a non-breaking space; an escape survives copying the plan.
 const NBSP = " ";
 
-function renderCard(goal: Parameters<typeof GoalCard>[0]["goal"]) {
-  return render(<GoalCard goal={goal} today={TEST_TODAY} />);
+function renderCard(
+  goal: Parameters<typeof GoalCard>[0]["goal"],
+  onDeposit?: GoalDepositHandler,
+) {
+  return render(
+    <GoalCard goal={goal} today={TEST_TODAY} onDeposit={onDeposit} />,
+  );
 }
 
 describe("GoalCard", () => {
@@ -97,9 +102,41 @@ describe("GoalCard", () => {
     );
   });
 
-  it("has no buttons: the actions arrive with the dialogs in T-061", () => {
+  it("has no deposit button without a handler", () => {
     renderCard(ACTIVE_GOAL);
 
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("names the deposit button after the goal and marks it for the focus restore", () => {
+    renderCard(ACTIVE_GOAL, vi.fn());
+
+    const button = screen.getByRole("button", {
+      name: "Wpłać kwotę: Wakacje we Włoszech",
+    });
+    expect(button.textContent).toBe("+ Wpłać kwotę");
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.getAttribute("data-edit-for")).toBe("1");
+  });
+
+  it("keeps the deposit button on a completed goal: an overpayment is allowed", () => {
+    renderCard(COMPLETED_GOAL, vi.fn());
+
+    expect(
+      screen.getByRole("button", { name: "Wpłać kwotę: Poduszka finansowa" }),
+    ).toBeTruthy();
+  });
+
+  it("passes the goal and the clicked button to the handler", () => {
+    const onDeposit = vi.fn<GoalDepositHandler>();
+    renderCard(OVERDUE_GOAL, onDeposit);
+
+    const button = screen.getByRole("button", {
+      name: "Wpłać kwotę: Nowy laptop",
+    });
+    fireEvent.click(button);
+
+    expect(onDeposit).toHaveBeenCalledTimes(1);
+    expect(onDeposit).toHaveBeenCalledWith(OVERDUE_GOAL, button);
   });
 });

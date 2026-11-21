@@ -24,6 +24,7 @@ import {
   useTransactions,
 } from "@/hooks/useTransactions";
 import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
+import { PRIMARY_ACTION } from "@/lib/buttonStyles";
 import { FOCUS_RING } from "@/lib/focusRing";
 import { getFiltersAfterDelete } from "@/lib/transactions/deleteNavigation";
 import {
@@ -41,8 +42,6 @@ import {
   type TransactionFormValues,
 } from "@/lib/transactions/transactionForm";
 import type { TransactionResponse } from "@/types/api";
-
-const PRIMARY_ACTION = `inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline ${FOCUS_RING}`;
 
 type TransactionsViewProps = {
   filters: TransactionFilters;
