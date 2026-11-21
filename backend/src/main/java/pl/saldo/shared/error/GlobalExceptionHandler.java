@@ -24,6 +24,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import jakarta.servlet.http.HttpServletRequest;
 import pl.saldo.budget.domain.BudgetCategoryNotExpenseException;
 import pl.saldo.budget.domain.BudgetLimitConflictException;
+import pl.saldo.budget.domain.InvalidBudgetUsageQueryException;
 import pl.saldo.category.domain.CategoryAlreadyExistsException;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
 import pl.saldo.transaction.domain.AmountPlnLimitExceededException;
@@ -110,6 +111,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler(InvalidTransactionQueryException.class)
 	public ProblemDetail handleInvalidTransactionQuery(InvalidTransactionQueryException ex) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.INVALID_QUERY);
+		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
+		return problem;
+	}
+
+	@ExceptionHandler(InvalidBudgetUsageQueryException.class)
+	public ProblemDetail handleInvalidBudgetUsageQuery(InvalidBudgetUsageQueryException ex) {
 		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.INVALID_QUERY);
 		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
 		return problem;
