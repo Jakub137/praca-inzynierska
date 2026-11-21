@@ -9,7 +9,6 @@ import static org.mockito.Mockito.never;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,20 +29,23 @@ class DeleteSavingsGoalUseCaseTest {
 	private static final Instant NOW = Instant.parse("2026-11-20T10:00:00Z");
 
 	@Mock
+	private OwnedSavingsGoalFinder ownedSavingsGoalFinder;
+
+	@Mock
 	private SavingsGoalRepository savingsGoalRepository;
 
 	private DeleteSavingsGoalUseCase useCase;
 
 	@BeforeEach
 	void setUp() {
-		useCase = new DeleteSavingsGoalUseCase(savingsGoalRepository);
+		useCase = new DeleteSavingsGoalUseCase(ownedSavingsGoalFinder, savingsGoalRepository);
 	}
 
 	@Test
 	void shouldDeleteOwnedGoal() {
 		SavingsGoalEntity goal = new SavingsGoalEntity(
 				USER_ID, "Wakacje", new BigDecimal("6000.00"), LocalDate.of(2027, 7, 15), NOW);
-		given(savingsGoalRepository.findByIdAndUserId(ID, USER_ID)).willReturn(Optional.of(goal));
+		given(ownedSavingsGoalFinder.findOwned(ID, USER_ID)).willReturn(goal);
 
 		useCase.execute(USER_ID, ID);
 
@@ -52,7 +54,8 @@ class DeleteSavingsGoalUseCaseTest {
 
 	@Test
 	void shouldThrowNotFoundAndDeleteNothingWhenGoalIsMissingOrForeign() {
-		given(savingsGoalRepository.findByIdAndUserId(ID, USER_ID)).willReturn(Optional.empty());
+		given(ownedSavingsGoalFinder.findOwned(ID, USER_ID))
+				.willThrow(new ResourceNotFoundException("Savings goal not found: " + ID));
 
 		assertThatThrownBy(() -> useCase.execute(USER_ID, ID)).isInstanceOf(ResourceNotFoundException.class);
 

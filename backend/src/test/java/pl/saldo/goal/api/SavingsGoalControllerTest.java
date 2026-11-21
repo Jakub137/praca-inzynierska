@@ -31,6 +31,8 @@ import pl.saldo.goal.domain.GoalStatus;
 import pl.saldo.goal.domain.InvalidSavingsGoalException;
 import pl.saldo.goal.usecase.CreateSavingsGoalUseCase;
 import pl.saldo.goal.usecase.DeleteSavingsGoalUseCase;
+import pl.saldo.goal.usecase.DepositToGoalCommand;
+import pl.saldo.goal.usecase.DepositToGoalUseCase;
 import pl.saldo.goal.usecase.GetSavingsGoalsUseCase;
 import pl.saldo.goal.usecase.SavingsGoalCommand;
 import pl.saldo.goal.usecase.UpdateSavingsGoalUseCase;
@@ -56,6 +58,9 @@ class SavingsGoalControllerTest {
 			{"name": "Wakacje we Włoszech", "targetAmount": 6000.00, "targetDate": "2027-07-15"}""";
 	private static final SavingsGoalCommand VALID_COMMAND =
 			new SavingsGoalCommand("Wakacje we Włoszech", new BigDecimal("6000.00"), TARGET_DATE);
+	private static final String DEPOSIT_BODY = """
+			{"amount": 500.00}""";
+	private static final DepositToGoalCommand DEPOSIT_COMMAND = new DepositToGoalCommand(new BigDecimal("500.00"));
 	private static final SavingsGoalResponse RESPONSE = new SavingsGoalResponse(
 			3L, "Wakacje we Włoszech", new BigDecimal("6000.00"), new BigDecimal("0.00"), TARGET_DATE,
 			GoalStatus.ACTIVE, 7, new BigDecimal("857.15"));
@@ -74,6 +79,9 @@ class SavingsGoalControllerTest {
 
 	@MockitoBean
 	private DeleteSavingsGoalUseCase deleteSavingsGoalUseCase;
+
+	@MockitoBean
+	private DepositToGoalUseCase depositToGoalUseCase;
 
 	@MockitoBean
 	private JwtService jwtService;
@@ -271,6 +279,111 @@ class SavingsGoalControllerTest {
 		then(deleteSavingsGoalUseCase).shouldHaveNoInteractions();
 	}
 
+	@Test
+	void shouldReturn200WithGoalAfterDeposit() {
+		authenticate();
+		given(depositToGoalUseCase.execute(USER_ID, 3L, DEPOSIT_COMMAND)).willReturn(new SavingsGoalResponse(
+				3L, "Wakacje we Włoszech", new BigDecimal("6000.00"), new BigDecimal("6000.00"), TARGET_DATE,
+				GoalStatus.COMPLETED, 7, new BigDecimal("0.00")));
+
+		MvcTestResult result = deposit("3", DEPOSIT_BODY);
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyJson().extractingPath("$.id").isEqualTo(3);
+		assertThat(result).bodyJson().extractingPath("$.currentAmount").isEqualTo(6000.0);
+		assertThat(result).bodyJson().extractingPath("$.status").isEqualTo("COMPLETED");
+		assertThat(result).bodyJson().extractingPath("$.monthlyContribution").isEqualTo(0.0);
+		assertThat(result).bodyJson().doesNotHavePath("$.userId");
+	}
+
+	@Test
+	void shouldReturn401ForDepositWithoutTokenAndNotCallUseCase() {
+		MvcTestResult result = mvc.post().uri(GOALS_URI + "/3/deposit")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(DEPOSIT_BODY)
+				.exchange();
+
+		assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+		then(depositToGoalUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WhenDepositAmountIsMissing() {
+		authenticate();
+
+		MvcTestResult result = deposit("3", "{}");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("amount");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message").isEqualTo("Kwota wpłaty jest wymagana");
+		then(depositToGoalUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WhenDepositAmountIsZero() {
+		authenticate();
+
+		MvcTestResult result = deposit("3", """
+				{"amount": 0}""");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("amount");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message")
+				.isEqualTo("Kwota wpłaty musi być większa od zera");
+		then(depositToGoalUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WhenDepositAmountHasThreeDecimals() {
+		authenticate();
+
+		MvcTestResult result = deposit("3", """
+				{"amount": 10.123}""");
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message")
+				.isEqualTo("Kwota wpłaty może mieć maksymalnie 10 cyfr przed przecinkiem i 2 po przecinku");
+		then(depositToGoalUseCase).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void shouldReturn400WithFieldErrorsWhenTotalExceedsLimit() {
+		authenticate();
+		given(depositToGoalUseCase.execute(USER_ID, 3L, DEPOSIT_COMMAND)).willThrow(new InvalidSavingsGoalException(
+				List.of(new ApiFieldError("amount",
+						"Suma wpłat na ten cel nie może przekroczyć 9 999 999 999,99. Wpisz mniejszą kwotę."))));
+
+		MvcTestResult result = deposit("3", DEPOSIT_BODY);
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		assertThat(result).bodyJson().extractingPath("$.title").isEqualTo("Błąd walidacji");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].field").isEqualTo("amount");
+		assertThat(result).bodyJson().extractingPath("$.fieldErrors[0].message")
+				.isEqualTo("Suma wpłat na ten cel nie może przekroczyć 9 999 999 999,99. Wpisz mniejszą kwotę.");
+	}
+
+	@Test
+	void shouldReturn404WhenDepositGoalIsMissingOrForeign() {
+		authenticate();
+		given(depositToGoalUseCase.execute(USER_ID, 3L, DEPOSIT_COMMAND))
+				.willThrow(new ResourceNotFoundException("Savings goal not found: 3"));
+
+		MvcTestResult result = deposit("3", DEPOSIT_BODY);
+
+		assertThat(result).hasStatus(HttpStatus.NOT_FOUND);
+		assertThat(result).bodyJson().extractingPath("$.title").isEqualTo("Nie znaleziono zasobu");
+	}
+
+	@Test
+	void shouldReturn400WhenDepositIdIsNotANumber() {
+		authenticate();
+
+		MvcTestResult result = deposit("abc", DEPOSIT_BODY);
+
+		assertThat(result).hasStatus(HttpStatus.BAD_REQUEST);
+		then(depositToGoalUseCase).shouldHaveNoInteractions();
+	}
+
 	private MvcTestResult create(String body) {
 		return mvc.post().uri(GOALS_URI)
 				.header(HttpHeaders.AUTHORIZATION, bearer())
@@ -289,6 +402,14 @@ class SavingsGoalControllerTest {
 
 	private MvcTestResult delete(String id) {
 		return mvc.delete().uri(GOALS_URI + "/" + id).header(HttpHeaders.AUTHORIZATION, bearer()).exchange();
+	}
+
+	private MvcTestResult deposit(String id, String body) {
+		return mvc.post().uri(GOALS_URI + "/" + id + "/deposit")
+				.header(HttpHeaders.AUTHORIZATION, bearer())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body)
+				.exchange();
 	}
 
 	private static String bearer() {
