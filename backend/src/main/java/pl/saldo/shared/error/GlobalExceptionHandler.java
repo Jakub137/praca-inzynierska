@@ -27,6 +27,7 @@ import pl.saldo.budget.domain.BudgetLimitConflictException;
 import pl.saldo.budget.domain.InvalidBudgetUsageQueryException;
 import pl.saldo.category.domain.CategoryAlreadyExistsException;
 import pl.saldo.currency.domain.ExchangeRateUnavailableException;
+import pl.saldo.goal.domain.InvalidSavingsGoalException;
 import pl.saldo.transaction.domain.AmountPlnLimitExceededException;
 import pl.saldo.transaction.domain.CategoryTypeMismatchException;
 import pl.saldo.transaction.domain.InvalidTransactionQueryException;
@@ -119,6 +120,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(InvalidBudgetUsageQueryException.class)
 	public ProblemDetail handleInvalidBudgetUsageQuery(InvalidBudgetUsageQueryException ex) {
 		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.INVALID_QUERY);
+		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
+		return problem;
+	}
+
+	@ExceptionHandler(InvalidSavingsGoalException.class)
+	public ProblemDetail handleInvalidSavingsGoal(InvalidSavingsGoalException ex) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.VALIDATION);
 		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
 		return problem;
 	}
