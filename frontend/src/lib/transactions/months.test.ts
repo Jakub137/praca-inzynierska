@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMonthOptions,
+  formatMonthName,
   MONTH_OPTIONS_COUNT,
   monthToDateRange,
 } from "@/lib/transactions/months";
@@ -57,5 +58,15 @@ describe("monthToDateRange", () => {
       dateFrom: `${month}-01`,
       dateTo,
     });
+  });
+});
+
+describe("formatMonthName", () => {
+  it.each([
+    ["2026-11", "listopad 2026"],
+    ["2026-01", "styczeń 2026"],
+    ["2026-12", "grudzień 2026"],
+  ])("writes %s as %s (nominative, lower case)", (month, expected) => {
+    expect(formatMonthName(month)).toBe(expected);
   });
 });

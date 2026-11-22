@@ -46,3 +46,11 @@ export function monthToDateRange(month: string): DateRange {
   const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
   return { dateFrom: `${month}-01`, dateTo: `${month}-${padTwo(lastDay)}` };
 }
+
+// "RRRR-MM" to "listopad 2026": nominative case and lower case, for use inside a sentence.
+export function formatMonthName(month: string): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return MONTH_LABEL_FORMAT.format(
+    new Date(Date.UTC(year, monthNumber - 1, 1)),
+  );
+}

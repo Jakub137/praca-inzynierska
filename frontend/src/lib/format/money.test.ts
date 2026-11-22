@@ -3,6 +3,7 @@ import {
   formatForeignAmount,
   formatPercent,
   formatPln,
+  formatSignedPercent,
   formatSignedPln,
 } from "@/lib/format/money";
 
@@ -49,5 +50,16 @@ describe("formatPercent", () => {
     [184.2, "184%"],
   ])("shows %s as %s (truncated, no rounding up)", (value, expected) => {
     expect(formatPercent(value)).toBe(expected);
+  });
+});
+
+describe("formatSignedPercent", () => {
+  it.each([
+    [12.5, "+12,5%"],
+    [-3.4, "-3,4%"],
+    [0, "0,0%"],
+    [100, "+100,0%"],
+  ])("shows %s as %s (one decimal place, explicit sign)", (value, expected) => {
+    expect(formatSignedPercent(value)).toBe(expected);
   });
 });
