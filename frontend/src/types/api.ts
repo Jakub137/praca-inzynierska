@@ -189,3 +189,34 @@ export type SavingsGoalRequest = {
 export type DepositToGoalRequest = {
   readonly amount: number;
 };
+
+// Allowed values of the frequency column (chk_recurring_payments_frequency in V3_2).
+export type PaymentFrequency = "WEEKLY" | "MONTHLY" | "YEARLY";
+
+// One position of GET /api/v1/recurring-payments and the answer of POST (RecurringPaymentResponse).
+export type RecurringPaymentResponse = {
+  readonly id: number;
+  readonly name: string;
+  // Display only: amounts are BigDecimal in the backend, never summed or compared here.
+  // The amount is in the currency below and is not converted to PLN.
+  readonly amount: number;
+  readonly currency: SupportedCurrency;
+  readonly frequency: PaymentFrequency;
+  // Calendar date "RRRR-MM-DD"; a payment past its date stays on the list.
+  readonly nextDueDate: string;
+  readonly categoryId: number;
+  readonly categoryName: string;
+};
+
+// Body of POST /api/v1/recurring-payments (RecurringPaymentCommand).
+export type RecurringPaymentRequest = {
+  readonly name: string;
+  // At most 10 integer and 2 fraction digits, so the JSON number keeps the exact decimal value.
+  readonly amount: number;
+  readonly currency: SupportedCurrency;
+  readonly frequency: PaymentFrequency;
+  // Calendar date "RRRR-MM-DD": today or later (Europe/Warsaw) and not later than 2100-12-31.
+  readonly nextDueDate: string;
+  // Must be an expense category, the user's own or a system one.
+  readonly categoryId: number;
+};

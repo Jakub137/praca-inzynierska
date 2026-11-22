@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { GoalDialogFrame } from "@/components/goals/GoalDialogFrame";
+import { FormDialogFrame } from "@/components/ui/FormDialogFrame";
 import { FormInput } from "@/components/ui/FormInput";
 import { useDepositForm } from "@/hooks/useDepositForm";
 import { formatPln } from "@/lib/format/money";
@@ -29,7 +29,7 @@ export function DepositDialog({
   const { amount: amountRef } = refs;
 
   return (
-    <GoalDialogFrame
+    <FormDialogFrame
       title={`Wpłata na cel: ${goal.name}`}
       description={`Zebrano ${formatPln(goal.currentAmount)} z ${formatPln(goal.targetAmount)}`}
       submitLabel="Wpłać"
@@ -52,6 +52,6 @@ export function DepositDialog({
           error={errors.amount}
         />
       </div>
-    </GoalDialogFrame>
+    </FormDialogFrame>
   );
 }

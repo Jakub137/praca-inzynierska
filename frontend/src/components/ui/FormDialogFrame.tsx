@@ -22,7 +22,7 @@ type FrameForm = {
   readonly handleSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
-type GoalDialogFrameProps = {
+type FormDialogFrameProps = {
   title: string;
   description: string;
   submitLabel: string;
@@ -33,7 +33,7 @@ type GoalDialogFrameProps = {
   children: ReactNode;
 };
 
-export function GoalDialogFrame({
+export function FormDialogFrame({
   title,
   description,
   submitLabel,
@@ -42,7 +42,7 @@ export function GoalDialogFrame({
   initialFocusRef,
   returnFocusRef,
   children,
-}: GoalDialogFrameProps) {
+}: FormDialogFrameProps) {
   const formId = useId();
   const alertRef = useRef<HTMLDivElement>(null);
   const { submitError } = form;

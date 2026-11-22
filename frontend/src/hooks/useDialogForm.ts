@@ -11,7 +11,8 @@ type UseDialogFormOptions<Field extends string, Request> = {
   initialValues: FieldValues<Field>;
   // Order of the fields in the form: the first invalid one gets the focus.
   fields: readonly Field[];
-  refs: Readonly<Record<Field, RefObject<HTMLInputElement | null>>>;
+  // Inputs and selects: the first invalid field gets the focus.
+  refs: Readonly<Record<Field, RefObject<HTMLElement | null>>>;
   parse: (values: FieldValues<Field>) => FormParseResult<Field, Request>;
   mapServerErrors: (
     fieldErrors: readonly FieldError[] | undefined,
