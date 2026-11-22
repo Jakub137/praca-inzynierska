@@ -48,4 +48,27 @@ public interface TransactionRepository
 			@Param("startDate") LocalDate startDate,
 			@Param("endDate") LocalDate endDate);
 
+	// Totals per transaction type for every transaction dated before endDate (exclusive): with endDate = today + 1
+	// day this is the balance up to and including today. The user filter is essential (shared system categories).
+	@Query("""
+			select new pl.saldo.transaction.infrastructure.TypeTotal(t.type, sum(t.amountPln))
+			from TransactionEntity t
+			where t.userId = :userId
+				and t.transactionDate < :endDate
+			group by t.type""")
+	List<TypeTotal> sumByTypeBefore(@Param("userId") UUID userId, @Param("endDate") LocalDate endDate);
+
+	// Same totals for the half-open range [startDate, endDate): the whole calendar month, future days included.
+	@Query("""
+			select new pl.saldo.transaction.infrastructure.TypeTotal(t.type, sum(t.amountPln))
+			from TransactionEntity t
+			where t.userId = :userId
+				and t.transactionDate >= :startDate
+				and t.transactionDate < :endDate
+			group by t.type""")
+	List<TypeTotal> sumByTypeBetween(
+			@Param("userId") UUID userId,
+			@Param("startDate") LocalDate startDate,
+			@Param("endDate") LocalDate endDate);
+
 }

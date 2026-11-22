@@ -1,5 +1,6 @@
 package pl.saldo.budget.infrastructure;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +28,19 @@ public interface BudgetLimitRepository extends JpaRepository<BudgetLimitEntity, 
 				and bl.month = :budgetMonth
 			order by c.name, c.id""")
 	List<BudgetLimitRow> findUsageRows(
+			@Param("userId") UUID userId,
+			@Param("budgetYear") int budgetYear,
+			@Param("budgetMonth") int budgetMonth);
+
+	// SUM over zero rows is NULL, so a month without limits is Optional.empty() and not 0: "no limits" is not
+	// the same as "limits totalling zero".
+	@Query("""
+			select sum(bl.limitAmount)
+			from BudgetLimitEntity bl
+			where bl.userId = :userId
+				and bl.year = :budgetYear
+				and bl.month = :budgetMonth""")
+	Optional<BigDecimal> sumLimitAmount(
 			@Param("userId") UUID userId,
 			@Param("budgetYear") int budgetYear,
 			@Param("budgetMonth") int budgetMonth);
