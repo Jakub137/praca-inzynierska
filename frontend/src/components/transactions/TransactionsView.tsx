@@ -14,8 +14,8 @@ import { TransactionsFilters } from "@/components/transactions/TransactionsFilte
 import { TransactionsPagination } from "@/components/transactions/TransactionsPagination";
 import { TransactionsSkeleton } from "@/components/transactions/TransactionsSkeleton";
 import { TransactionsTable } from "@/components/transactions/TransactionsTable";
-import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { RetryError } from "@/components/ui/RetryError";
 import { useCreateTransaction } from "@/hooks/useCreateTransaction";
 import { useDeleteTransaction } from "@/hooks/useDeleteTransaction";
 import { useEditFocusRestore } from "@/hooks/useEditFocusRestore";
@@ -25,7 +25,6 @@ import {
 } from "@/hooks/useTransactions";
 import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
 import { PRIMARY_ACTION } from "@/lib/buttonStyles";
-import { FOCUS_RING } from "@/lib/focusRing";
 import { getFiltersAfterDelete } from "@/lib/transactions/deleteNavigation";
 import {
   buildTransactionsHref,
@@ -49,25 +48,6 @@ type TransactionsViewProps = {
 };
 
 type ActiveState = Exclude<TransactionsState, { readonly status: "idle" }>;
-
-type TransactionsErrorProps = {
-  onRetry: () => void;
-};
-
-function TransactionsError({ onRetry }: TransactionsErrorProps) {
-  return (
-    <div className="flex max-w-md flex-col items-start gap-3">
-      <Alert variant="error">Nie udało się wczytać transakcji.</Alert>
-      <button
-        type="button"
-        onClick={onRetry}
-        className={`min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
-      >
-        Spróbuj ponownie
-      </button>
-    </div>
-  );
-}
 
 type NoResultsProps = {
   filters: TransactionFilters;
@@ -122,7 +102,12 @@ function TransactionsResults({
     return <TransactionsSkeleton />;
   }
   if (state.status === "error") {
-    return <TransactionsError onRetry={onRetry} />;
+    return (
+      <RetryError
+        message="Nie udało się wczytać transakcji."
+        onRetry={onRetry}
+      />
+    );
   }
   const { page } = state;
   if (page.content.length === 0) {

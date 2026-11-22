@@ -1,8 +1,8 @@
 "use client";
 
 import type { RefObject } from "react";
-import { GoalDialogFrame } from "@/components/goals/GoalDialogFrame";
 import { GoalFormFields } from "@/components/goals/GoalFormFields";
+import { FormDialogFrame } from "@/components/ui/FormDialogFrame";
 import { useGoalForm } from "@/hooks/useGoalForm";
 import type { SavingsGoalRequest } from "@/types/api";
 
@@ -24,7 +24,7 @@ export function NewGoalDialog({
   const form = useGoalForm({ today, onSubmit });
 
   return (
-    <GoalDialogFrame
+    <FormDialogFrame
       title="Nowy cel"
       description="Zaplanuj oszczędzanie: podaj nazwę, kwotę i termin celu"
       submitLabel="Zapisz cel"
@@ -34,6 +34,6 @@ export function NewGoalDialog({
       returnFocusRef={returnFocusRef}
     >
       <GoalFormFields form={form} today={today} />
-    </GoalDialogFrame>
+    </FormDialogFrame>
   );
 }

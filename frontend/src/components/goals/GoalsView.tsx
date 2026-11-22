@@ -6,8 +6,8 @@ import { GoalCard, type GoalDepositHandler } from "@/components/goals/GoalCard";
 import { GoalsSkeleton } from "@/components/goals/GoalsSkeleton";
 import { NewGoalDialog } from "@/components/goals/NewGoalDialog";
 import { TargetIcon } from "@/components/icons/TargetIcon";
-import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { RetryError } from "@/components/ui/RetryError";
 import { useCreateSavingsGoal } from "@/hooks/useCreateSavingsGoal";
 import { useDepositToGoal } from "@/hooks/useDepositToGoal";
 import { useEditFocusRestore } from "@/hooks/useEditFocusRestore";
@@ -16,7 +16,6 @@ import {
   useSavingsGoals,
 } from "@/hooks/useSavingsGoals";
 import { PRIMARY_ACTION } from "@/lib/buttonStyles";
-import { FOCUS_RING } from "@/lib/focusRing";
 import { getTodayIso } from "@/lib/goals/deadline";
 import type { SavingsGoalResponse } from "@/types/api";
 
@@ -54,25 +53,6 @@ function NewGoalButton({ onAdd, ref }: NewGoalButtonProps) {
   );
 }
 
-type GoalsErrorProps = {
-  onRetry: () => void;
-};
-
-function GoalsError({ onRetry }: GoalsErrorProps) {
-  return (
-    <div className="flex max-w-md flex-col items-start gap-3">
-      <Alert variant="error">Nie udało się wczytać celów.</Alert>
-      <button
-        type="button"
-        onClick={onRetry}
-        className={`min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
-      >
-        Spróbuj ponownie
-      </button>
-    </div>
-  );
-}
-
 type GoalsResultsProps = {
   state: ActiveState;
   onRetry: () => void;
@@ -85,7 +65,9 @@ function GoalsResults({ state, onRetry, onAdd, onDeposit }: GoalsResultsProps) {
     return <GoalsSkeleton />;
   }
   if (state.status === "error") {
-    return <GoalsError onRetry={onRetry} />;
+    return (
+      <RetryError message="Nie udało się wczytać celów." onRetry={onRetry} />
+    );
   }
   if (state.goals.length === 0) {
     return (

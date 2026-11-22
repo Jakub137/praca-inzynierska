@@ -9,14 +9,13 @@ import { BudgetMonthSelect } from "@/components/budgets/BudgetMonthSelect";
 import { BudgetsSkeleton } from "@/components/budgets/BudgetsSkeleton";
 import { LimitDialog } from "@/components/budgets/LimitDialog";
 import { WalletIcon } from "@/components/icons/WalletIcon";
-import { Alert } from "@/components/ui/Alert";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { RetryError } from "@/components/ui/RetryError";
 import { type BudgetUsageState, useBudgetUsage } from "@/hooks/useBudgetUsage";
 import { useEditFocusRestore } from "@/hooks/useEditFocusRestore";
 import { useSetBudgetLimit } from "@/hooks/useSetBudgetLimit";
 import { monthToBudgetPeriod } from "@/lib/budgets/period";
 import { PRIMARY_ACTION } from "@/lib/buttonStyles";
-import { FOCUS_RING } from "@/lib/focusRing";
 import type { MonthOption } from "@/lib/transactions/months";
 import type { BudgetUsageResponse } from "@/types/api";
 
@@ -34,25 +33,6 @@ type LimitDialogState =
   | { readonly mode: "create" }
   | { readonly mode: "edit"; readonly limit: BudgetUsageResponse };
 
-type BudgetsErrorProps = {
-  onRetry: () => void;
-};
-
-function BudgetsError({ onRetry }: BudgetsErrorProps) {
-  return (
-    <div className="flex max-w-md flex-col items-start gap-3">
-      <Alert variant="error">Nie udało się wczytać limitów.</Alert>
-      <button
-        type="button"
-        onClick={onRetry}
-        className={`min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
-      >
-        Spróbuj ponownie
-      </button>
-    </div>
-  );
-}
-
 type BudgetsResultsProps = {
   state: ActiveState;
   onRetry: () => void;
@@ -64,7 +44,9 @@ function BudgetsResults({ state, onRetry, onEdit }: BudgetsResultsProps) {
     return <BudgetsSkeleton />;
   }
   if (state.status === "error") {
-    return <BudgetsError onRetry={onRetry} />;
+    return (
+      <RetryError message="Nie udało się wczytać limitów." onRetry={onRetry} />
+    );
   }
   if (state.usage.length === 0) {
     return (
