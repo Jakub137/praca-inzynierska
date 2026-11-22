@@ -1,16 +1,14 @@
 "use client";
 
-import { type RefObject, useEffect, useId, useRef } from "react";
+import type { RefObject } from "react";
 import {
   type CategoriesStatus,
   TransactionFormFields,
 } from "@/components/transactions/TransactionFormFields";
-import { Alert } from "@/components/ui/Alert";
-import { Modal } from "@/components/ui/Modal";
+import { FormDialogFrame } from "@/components/ui/FormDialogFrame";
 import { type CategoriesState, useCategories } from "@/hooks/useCategories";
 import { useCurrencyRates } from "@/hooks/useCurrencyRates";
 import { useTransactionForm } from "@/hooks/useTransactionForm";
-import { FOCUS_RING } from "@/lib/focusRing";
 import type { TransactionFormValues } from "@/lib/transactions/transactionForm";
 import type {
   CategoryResponse,
@@ -45,8 +43,6 @@ const DIALOG_TEXTS = {
   },
 } as const;
 
-const SAVING_LABEL = "Zapisywanie…";
-
 const NO_CATEGORIES: readonly CategoryResponse[] = [];
 const NO_RATES: readonly CurrencyRateResponse[] = [];
 
@@ -60,11 +56,7 @@ function toCategoriesStatus(state: CategoriesState): CategoriesStatus {
 function getSubmitLabel(
   mode: TransactionDialogMode,
   type: TransactionType,
-  isSubmitting: boolean,
 ): string {
-  if (isSubmitting) {
-    return SAVING_LABEL;
-  }
   if (mode === "edit") {
     return "Zapisz zmiany";
   }
@@ -79,8 +71,6 @@ export function TransactionDialog({
   returnFocusRef,
   savedTransaction,
 }: TransactionDialogProps) {
-  const formId = useId();
-  const alertRef = useRef<HTMLDivElement>(null);
   const categoriesState = useCategories();
   const ratesState = useCurrencyRates();
   const categories =
@@ -89,64 +79,26 @@ export function TransactionDialog({
       : NO_CATEGORIES;
   const rates = ratesState.status === "ready" ? ratesState.rates : NO_RATES;
   const form = useTransactionForm({ initialValues, categories, onSubmit });
-  const { submitError } = form;
-  const canSubmit = categoriesState.status === "ready" && !form.isSubmitting;
   const texts = DIALOG_TEXTS[mode];
 
-  // After a failed request the focus moves to the message: it scrolls into view on a low screen
-  // and the focus does not stay on the button that was just disabled.
-  useEffect(() => {
-    if (submitError !== null) {
-      alertRef.current?.focus();
-    }
-  }, [submitError]);
-
-  const footer = (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-      <button
-        type="button"
-        onClick={onClose}
-        className={`min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
-      >
-        Anuluj
-      </button>
-      <button
-        type="submit"
-        form={formId}
-        disabled={!canSubmit}
-        className={`min-h-11 rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
-      >
-        {getSubmitLabel(mode, form.selectedType, form.isSubmitting)}
-      </button>
-    </div>
-  );
-
   return (
-    <Modal
-      open
-      onClose={onClose}
+    <FormDialogFrame
       title={texts.title}
       description={texts.description}
+      submitLabel={getSubmitLabel(mode, form.selectedType)}
+      canSubmit={categoriesState.status === "ready"}
+      form={form}
+      onClose={onClose}
       initialFocusRef={form.refs.amount}
       returnFocusRef={returnFocusRef}
-      footer={footer}
     >
-      {submitError !== null && (
-        <div className="mb-3">
-          <Alert variant="error" ref={alertRef}>
-            {submitError}
-          </Alert>
-        </div>
-      )}
-      <form id={formId} noValidate onSubmit={form.handleSubmit}>
-        <TransactionFormFields
-          form={form}
-          categories={categories}
-          categoriesStatus={toCategoriesStatus(categoriesState)}
-          rates={rates}
-          savedTransaction={savedTransaction}
-        />
-      </form>
-    </Modal>
+      <TransactionFormFields
+        form={form}
+        categories={categories}
+        categoriesStatus={toCategoriesStatus(categoriesState)}
+        rates={rates}
+        savedTransaction={savedTransaction}
+      />
+    </FormDialogFrame>
   );
 }

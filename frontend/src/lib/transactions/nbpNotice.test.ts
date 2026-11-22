@@ -33,10 +33,10 @@ describe("buildAmountHint", () => {
 
   it("groups thousands with a non-breaking space, also in four digits", () => {
     expect(buildAmountHint("1000", "EUR", TEST_RATES)).toBe(
-      `≈ 4 310,00 PLN wg kursu średniego NBP z 17.11.2026 (4,3100). ${SERVER_NOTE}`,
+      `≈ 4\u00a0310,00 PLN wg kursu średniego NBP z 17.11.2026 (4,3100). ${SERVER_NOTE}`,
     );
     expect(buildAmountHint("10000", "EUR", TEST_RATES)).toBe(
-      `≈ 43 100,00 PLN wg kursu średniego NBP z 17.11.2026 (4,3100). ${SERVER_NOTE}`,
+      `≈ 43\u00a0100,00 PLN wg kursu średniego NBP z 17.11.2026 (4,3100). ${SERVER_NOTE}`,
     );
   });
 

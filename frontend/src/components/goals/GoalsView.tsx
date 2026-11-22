@@ -6,6 +6,7 @@ import { GoalCard, type GoalDepositHandler } from "@/components/goals/GoalCard";
 import { GoalsSkeleton } from "@/components/goals/GoalsSkeleton";
 import { NewGoalDialog } from "@/components/goals/NewGoalDialog";
 import { TargetIcon } from "@/components/icons/TargetIcon";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RetryError } from "@/components/ui/RetryError";
 import { useCreateSavingsGoal } from "@/hooks/useCreateSavingsGoal";
@@ -15,7 +16,6 @@ import {
   type SavingsGoalsState,
   useSavingsGoals,
 } from "@/hooks/useSavingsGoals";
-import { PRIMARY_ACTION } from "@/lib/buttonStyles";
 import { getTodayIso } from "@/lib/goals/deadline";
 import type { SavingsGoalResponse } from "@/types/api";
 
@@ -42,14 +42,9 @@ type NewGoalButtonProps = {
 
 function NewGoalButton({ onAdd, ref }: NewGoalButtonProps) {
   return (
-    <button
-      ref={ref}
-      type="button"
-      onClick={(event) => onAdd(event.currentTarget)}
-      className={PRIMARY_ACTION}
-    >
+    <Button ref={ref} onClick={(event) => onAdd(event.currentTarget)}>
       {NEW_GOAL_LABEL}
-    </button>
+    </Button>
   );
 }
 

@@ -3,6 +3,7 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { TransactionAmount } from "@/components/transactions/TransactionAmount";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { getUserMessage } from "@/lib/api/errors";
 import { FOCUS_RING } from "@/lib/focusRing";
@@ -59,14 +60,9 @@ export function DeleteTransactionDialog({
 
   const footer = (
     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-      <button
-        ref={cancelRef}
-        type="button"
-        onClick={onClose}
-        className={`min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
-      >
+      <Button ref={cancelRef} variant="secondary" onClick={onClose}>
         Anuluj
-      </button>
+      </Button>
       <button
         type="button"
         onClick={() => void confirm()}

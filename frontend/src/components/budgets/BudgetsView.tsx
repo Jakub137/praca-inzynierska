@@ -9,13 +9,13 @@ import { BudgetMonthSelect } from "@/components/budgets/BudgetMonthSelect";
 import { BudgetsSkeleton } from "@/components/budgets/BudgetsSkeleton";
 import { LimitDialog } from "@/components/budgets/LimitDialog";
 import { WalletIcon } from "@/components/icons/WalletIcon";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RetryError } from "@/components/ui/RetryError";
 import { type BudgetUsageState, useBudgetUsage } from "@/hooks/useBudgetUsage";
 import { useEditFocusRestore } from "@/hooks/useEditFocusRestore";
 import { useSetBudgetLimit } from "@/hooks/useSetBudgetLimit";
 import { monthToBudgetPeriod } from "@/lib/budgets/period";
-import { PRIMARY_ACTION } from "@/lib/buttonStyles";
 import type { MonthOption } from "@/lib/transactions/months";
 import type { BudgetUsageResponse } from "@/types/api";
 
@@ -111,14 +111,12 @@ export function BudgetsView({ month, monthOptions }: BudgetsViewProps) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <BudgetMonthSelect month={month} monthOptions={monthOptions} />
-        <button
+        <Button
           ref={addButtonRef}
-          type="button"
           onClick={() => setDialog({ mode: "create" })}
-          className={PRIMARY_ACTION}
         >
           + Nowy limit
-        </button>
+        </Button>
       </div>
       <BudgetsResults state={state} onRetry={retry} onEdit={openEditDialog} />
       {dialog?.mode === "create" && (

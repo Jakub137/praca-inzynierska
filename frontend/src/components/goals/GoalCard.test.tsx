@@ -10,7 +10,7 @@ import {
 } from "@/test-utils/goals";
 
 // formatPln groups thousands with a non-breaking space; an escape survives copying the plan.
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 function renderCard(
   goal: Parameters<typeof GoalCard>[0]["goal"],

@@ -1,28 +1,22 @@
 "use client";
 
-import {
-  type ReactNode,
-  type RefObject,
-  useEffect,
-  useId,
-  useRef,
-} from "react";
+import type { RefObject } from "react";
 import {
   LimitFormFields,
   type LimitCategoryField,
 } from "@/components/budgets/LimitFormFields";
 import type { CategoriesStatus } from "@/components/transactions/TransactionFormFields";
-import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { FormDialogFrame } from "@/components/ui/FormDialogFrame";
 import { Modal } from "@/components/ui/Modal";
 import { type CategoriesState, useCategories } from "@/hooks/useCategories";
-import { type LimitFormState, useLimitForm } from "@/hooks/useLimitForm";
+import { useLimitForm } from "@/hooks/useLimitForm";
 import {
   createEmptyLimitValues,
   getAssignableCategories,
   toLimitFormValues,
 } from "@/lib/budgets/limitForm";
 import type { BudgetPeriod } from "@/lib/budgets/period";
-import { FOCUS_RING } from "@/lib/focusRing";
 import type {
   BudgetUsageResponse,
   CategoryResponse,
@@ -64,89 +58,13 @@ const EDIT_TEXTS = {
 const ALL_TAKEN_MESSAGE =
   "Wszystkie kategorie wydatków mają już limit w tym miesiącu. Zmień istniejący limit przyciskiem Edytuj limit.";
 
-const SAVING_LABEL = "Zapisywanie…";
 const NO_CATEGORIES: readonly CategoryResponse[] = [];
-
-const SECONDARY_BUTTON = `min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`;
 
 function toCategoriesStatus(state: CategoriesState): CategoriesStatus {
   if (state.status === "ready" || state.status === "error") {
     return state.status;
   }
   return "loading";
-}
-
-type LimitDialogFrameProps = {
-  title: string;
-  description: string;
-  submitLabel: string;
-  canSubmit: boolean;
-  form: LimitFormState;
-  onClose: () => void;
-  returnFocusRef?: RefObject<HTMLElement | null>;
-  children: ReactNode;
-};
-
-function LimitDialogFrame({
-  title,
-  description,
-  submitLabel,
-  canSubmit,
-  form,
-  onClose,
-  returnFocusRef,
-  children,
-}: LimitDialogFrameProps) {
-  const formId = useId();
-  const alertRef = useRef<HTMLDivElement>(null);
-  const { submitError } = form;
-
-  // After a failed request the focus moves to the message: it scrolls into view on a low screen
-  // and the focus does not stay on the button that was just disabled.
-  useEffect(() => {
-    if (submitError !== null) {
-      alertRef.current?.focus();
-    }
-  }, [submitError]);
-
-  const footer = (
-    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-      <button type="button" onClick={onClose} className={SECONDARY_BUTTON}>
-        Anuluj
-      </button>
-      <button
-        type="submit"
-        form={formId}
-        disabled={!canSubmit || form.isSubmitting}
-        className={`min-h-11 rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
-      >
-        {form.isSubmitting ? SAVING_LABEL : submitLabel}
-      </button>
-    </div>
-  );
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={title}
-      description={description}
-      initialFocusRef={form.refs.limitAmount}
-      returnFocusRef={returnFocusRef}
-      footer={footer}
-    >
-      {submitError !== null && (
-        <div className="mb-3">
-          <Alert variant="error" ref={alertRef}>
-            {submitError}
-          </Alert>
-        </div>
-      )}
-      <form id={formId} noValidate onSubmit={form.handleSubmit}>
-        {children}
-      </form>
-    </Modal>
-  );
 }
 
 type AllCategoriesTakenDialogProps = {
@@ -167,9 +85,9 @@ function AllCategoriesTakenDialog({
       returnFocusRef={returnFocusRef}
       footer={
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className={SECONDARY_BUTTON}>
+          <Button variant="secondary" onClick={onClose}>
             Zamknij
-          </button>
+          </Button>
         </div>
       }
     >
@@ -209,13 +127,14 @@ function CreateLimitDialog({
     );
   }
   return (
-    <LimitDialogFrame
+    <FormDialogFrame
       title={CREATE_TEXTS.title}
       description={CREATE_TEXTS.description}
       submitLabel="Zapisz limit"
       canSubmit={status === "ready"}
       form={form}
       onClose={onClose}
+      initialFocusRef={form.refs.limitAmount}
       returnFocusRef={returnFocusRef}
     >
       <LimitFormFields
@@ -223,7 +142,7 @@ function CreateLimitDialog({
         periodLabel={periodLabel}
         category={category}
       />
-    </LimitDialogFrame>
+    </FormDialogFrame>
   );
 }
 
@@ -243,13 +162,13 @@ function EditLimitDialog({
   });
 
   return (
-    <LimitDialogFrame
+    <FormDialogFrame
       title={EDIT_TEXTS.title}
       description={EDIT_TEXTS.description}
       submitLabel="Zapisz zmiany"
-      canSubmit
       form={form}
       onClose={onClose}
+      initialFocusRef={form.refs.limitAmount}
       returnFocusRef={returnFocusRef}
     >
       <LimitFormFields
@@ -257,7 +176,7 @@ function EditLimitDialog({
         periodLabel={periodLabel}
         category={{ kind: "locked", name: limit.categoryName }}
       />
-    </LimitDialogFrame>
+    </FormDialogFrame>
   );
 }
 

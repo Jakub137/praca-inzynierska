@@ -7,7 +7,7 @@ import {
   INCOME_PLN,
 } from "@/test-utils/transactions";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 function getSpanWithText(text: string) {
   return screen.getByText(
