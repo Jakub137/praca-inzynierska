@@ -7,7 +7,7 @@ import {
   formatSignedPln,
 } from "@/lib/format/money";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 describe("formatPln", () => {
   it("uses a comma and two decimal places", () => {

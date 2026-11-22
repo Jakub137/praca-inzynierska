@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
-import { FOCUS_RING } from "@/lib/focusRing";
 
 type SessionGateProps = {
   children: ReactNode;
@@ -27,13 +27,9 @@ export function SessionGate({ children }: SessionGateProps) {
     return (
       <div className="flex max-w-md flex-col items-start gap-3">
         <Alert variant="error">Nie udało się połączyć z serwerem.</Alert>
-        <button
-          type="button"
-          onClick={retry}
-          className={`min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
-        >
+        <Button variant="secondary" onClick={retry}>
           Spróbuj ponownie
-        </button>
+        </Button>
       </div>
     );
   }

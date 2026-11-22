@@ -14,6 +14,7 @@ import { TransactionsFilters } from "@/components/transactions/TransactionsFilte
 import { TransactionsPagination } from "@/components/transactions/TransactionsPagination";
 import { TransactionsSkeleton } from "@/components/transactions/TransactionsSkeleton";
 import { TransactionsTable } from "@/components/transactions/TransactionsTable";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RetryError } from "@/components/ui/RetryError";
 import { useCreateTransaction } from "@/hooks/useCreateTransaction";
@@ -227,14 +228,9 @@ export function TransactionsView({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
-        <button
-          ref={addButtonRef}
-          type="button"
-          onClick={openDialog}
-          className={PRIMARY_ACTION}
-        >
+        <Button ref={addButtonRef} onClick={openDialog}>
           + Dodaj wydatek
-        </button>
+        </Button>
       </div>
       <TransactionsFilters filters={filters} monthOptions={monthOptions} />
       <TransactionsResults

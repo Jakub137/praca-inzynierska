@@ -19,7 +19,12 @@ function ready(value: number): NumberReady {
   return { status: "ready", value };
 }
 
-function renderLoadHook(status: AuthStatus) {
+type LoadHookProps = {
+  load: () => Promise<SettledState<NumberReady>>;
+  requestKey?: string;
+};
+
+function renderLoadHook(status: AuthStatus, requestKey?: string) {
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <AuthContext.Provider value={makeAuthValue({ status })}>
@@ -27,10 +32,12 @@ function renderLoadHook(status: AuthStatus) {
       </AuthContext.Provider>
     );
   }
+  // Typed, so rerender() also accepts props without requestKey.
+  const initialProps: LoadHookProps = { load: loadMock, requestKey };
   return renderHook(
-    ({ load }: { load: () => Promise<SettledState<NumberReady>> }) =>
-      useAuthenticatedLoad(load),
-    { wrapper, initialProps: { load: loadMock } },
+    ({ load, requestKey: key }: LoadHookProps) =>
+      useAuthenticatedLoad(load, key),
+    { wrapper, initialProps },
   );
 }
 
@@ -103,5 +110,52 @@ describe("useAuthenticatedLoad", () => {
     expect(result.current.state).toEqual(ready(1));
     expect(loadMock).toHaveBeenCalledTimes(1);
     expect(otherLoad).not.toHaveBeenCalled();
+  });
+
+  it("shows loading and loads again when the request key changes", async () => {
+    loadMock.mockResolvedValueOnce(ready(1)).mockResolvedValueOnce(ready(2));
+    const { result, rerender } = renderLoadHook("authenticated", "a");
+    await waitFor(() => expect(result.current.state).toEqual(ready(1)));
+
+    rerender({ load: loadMock, requestKey: "b" });
+
+    expect(result.current.state).toEqual({ status: "loading" });
+    await waitFor(() => expect(result.current.state).toEqual(ready(2)));
+    expect(loadMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("starts the new request with the load of the render that changed the key", async () => {
+    const { result, rerender } = renderLoadHook("authenticated", "a");
+    await waitFor(() => expect(result.current.state).toEqual(ready(1)));
+    const keyedLoad = vi
+      .fn<() => Promise<SettledState<NumberReady>>>()
+      .mockResolvedValue(ready(7));
+
+    rerender({ load: keyedLoad, requestKey: "b" });
+
+    await waitFor(() => expect(result.current.state).toEqual(ready(7)));
+    expect(keyedLoad).toHaveBeenCalledTimes(1);
+    expect(loadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores the late result of an older request key", async () => {
+    let resolveFirst: (state: SettledState<NumberReady>) => void = () => {};
+    loadMock
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(ready(2));
+    const { result, rerender } = renderLoadHook("authenticated", "a");
+
+    rerender({ load: loadMock, requestKey: "b" });
+    await waitFor(() => expect(result.current.state).toEqual(ready(2)));
+    await act(async () => {
+      resolveFirst(ready(1));
+    });
+
+    expect(result.current.state).toEqual(ready(2));
+    expect(loadMock).toHaveBeenCalledTimes(2);
   });
 });

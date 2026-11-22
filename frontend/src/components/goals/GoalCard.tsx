@@ -1,6 +1,6 @@
 import { CheckIcon } from "@/components/icons/CheckIcon";
+import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { FOCUS_RING } from "@/lib/focusRing";
 import { formatPercent, formatPln } from "@/lib/format/money";
 import { buildDeadlineText } from "@/lib/goals/deadline";
 import { buildProgressHint } from "@/lib/goals/hint";
@@ -57,15 +57,15 @@ export function GoalCard({ goal, today, onDeposit }: GoalCardProps) {
       )}
       <p className="text-sm text-muted">{buildProgressHint(goal, percent)}</p>
       {onDeposit !== undefined && (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           aria-label={`Wpłać kwotę: ${name}`}
           data-edit-for={goal.id}
           onClick={(event) => onDeposit(goal, event.currentTarget)}
-          className={`min-h-11 self-start rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
+          className="self-start"
         >
           {DEPOSIT_LABEL}
-        </button>
+        </Button>
       )}
     </article>
   );

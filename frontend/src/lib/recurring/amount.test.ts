@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatPaymentAmount } from "@/lib/recurring/amount";
 
 // formatPln groups thousands with a non-breaking space; an escape survives copying the plan.
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 describe("formatPaymentAmount", () => {
   it("formats a PLN amount with zł", () => {

@@ -1,8 +1,8 @@
 import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon";
 import { CheckIcon } from "@/components/icons/CheckIcon";
+import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { BUDGET_STATUS_PRESENTATION } from "@/lib/budgets/status";
-import { FOCUS_RING } from "@/lib/focusRing";
 import { formatPercent, formatPln } from "@/lib/format/money";
 import type { BudgetUsageResponse } from "@/types/api";
 
@@ -53,15 +53,15 @@ export function BudgetCard({ usage, onEdit }: BudgetCardProps) {
         {presentation.label}
       </p>
       {onEdit !== undefined && (
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           aria-label={`${EDIT_LABEL}: ${categoryName}`}
           data-edit-for={usage.categoryId}
           onClick={(event) => onEdit(usage, event.currentTarget)}
-          className={`min-h-11 self-start rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`}
+          className="self-start"
         >
           {EDIT_LABEL}
-        </button>
+        </Button>
       )}
     </article>
   );

@@ -5,6 +5,7 @@ import { RepeatIcon } from "@/components/icons/RepeatIcon";
 import { RecurringPaymentDialog } from "@/components/recurring/RecurringPaymentDialog";
 import { RecurringPaymentsSkeleton } from "@/components/recurring/RecurringPaymentsSkeleton";
 import { RecurringPaymentsTable } from "@/components/recurring/RecurringPaymentsTable";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RetryError } from "@/components/ui/RetryError";
 import { useCreateRecurringPayment } from "@/hooks/useCreateRecurringPayment";
@@ -13,7 +14,6 @@ import {
   type RecurringPaymentsState,
   useRecurringPayments,
 } from "@/hooks/useRecurringPayments";
-import { PRIMARY_ACTION } from "@/lib/buttonStyles";
 import { getTodayIso } from "@/lib/goals/deadline";
 
 const ADD_PAYMENT_LABEL = "+ Dodaj płatność";
@@ -34,14 +34,9 @@ type AddPaymentButtonProps = {
 
 function AddPaymentButton({ onAdd, ref }: AddPaymentButtonProps) {
   return (
-    <button
-      ref={ref}
-      type="button"
-      onClick={(event) => onAdd(event.currentTarget)}
-      className={PRIMARY_ACTION}
-    >
+    <Button ref={ref} onClick={(event) => onAdd(event.currentTarget)}>
       {ADD_PAYMENT_LABEL}
-    </button>
+    </Button>
   );
 }
 

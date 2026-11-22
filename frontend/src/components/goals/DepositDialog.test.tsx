@@ -9,7 +9,7 @@ import type { DepositToGoalRequest, SavingsGoalResponse } from "@/types/api";
 type Submit = (request: DepositToGoalRequest) => Promise<void>;
 
 // formatPln groups thousands with a non-breaking space; an escape survives copying the plan.
-const NBSP = " ";
+const NBSP = "\u00a0";
 const AMOUNT = "Kwota wpłaty (PLN) *";
 // Copied from SavingsGoalEntity (backend).
 const TOTAL_TOO_LARGE =

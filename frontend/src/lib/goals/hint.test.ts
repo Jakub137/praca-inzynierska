@@ -8,7 +8,7 @@ import {
 } from "@/test-utils/goals";
 
 // formatPln groups thousands with a non-breaking space; an escape survives copying the plan.
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 describe("buildProgressHint", () => {
   it("advises a monthly contribution while months remain", () => {

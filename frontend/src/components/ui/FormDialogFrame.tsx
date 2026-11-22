@@ -9,12 +9,10 @@ import {
   useRef,
 } from "react";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { FOCUS_RING } from "@/lib/focusRing";
 
 const SAVING_LABEL = "Zapisywanie…";
-
-const SECONDARY_BUTTON = `min-h-11 rounded-lg border border-slate-300 px-4 text-sm font-medium text-ink hover:bg-slate-100 ${FOCUS_RING}`;
 
 type FrameForm = {
   readonly isSubmitting: boolean;
@@ -26,6 +24,8 @@ type FormDialogFrameProps = {
   title: string;
   description: string;
   submitLabel: string;
+  // False while the form cannot be sent yet, e.g. the categories are still loading.
+  canSubmit?: boolean;
   form: FrameForm;
   onClose: () => void;
   initialFocusRef: RefObject<HTMLElement | null>;
@@ -37,6 +37,7 @@ export function FormDialogFrame({
   title,
   description,
   submitLabel,
+  canSubmit = true,
   form,
   onClose,
   initialFocusRef,
@@ -57,17 +58,16 @@ export function FormDialogFrame({
 
   const footer = (
     <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-      <button type="button" onClick={onClose} className={SECONDARY_BUTTON}>
+      <Button variant="secondary" onClick={onClose}>
         Anuluj
-      </button>
-      <button
+      </Button>
+      <Button
         type="submit"
         form={formId}
-        disabled={form.isSubmitting}
-        className={`min-h-11 rounded-lg bg-brand px-4 text-sm font-medium text-white hover:underline disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS_RING}`}
+        disabled={!canSubmit || form.isSubmitting}
       >
         {form.isSubmitting ? SAVING_LABEL : submitLabel}
-      </button>
+      </Button>
     </div>
   );
 

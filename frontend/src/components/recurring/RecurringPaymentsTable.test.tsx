@@ -12,7 +12,7 @@ import {
 } from "@/test-utils/recurringPayments";
 
 // formatPln groups thousands with a non-breaking space; an escape survives copying the plan.
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 function renderTable(payments = TEST_PAYMENTS) {
   return render(
