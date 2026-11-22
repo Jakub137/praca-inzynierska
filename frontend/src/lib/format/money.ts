@@ -16,6 +16,14 @@ const PERCENT_FORMAT = new Intl.NumberFormat("pl-PL", {
   roundingMode: "trunc",
 });
 
+// The API already rounds the month-over-month change to one decimal place: nothing is rounded here.
+const CHANGE_FORMAT = new Intl.NumberFormat("pl-PL", {
+  style: "unit",
+  unit: "percent",
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
 const SIGNS: Record<TransactionType, string> = {
   INCOME: "+",
   EXPENSE: "-",
@@ -31,6 +39,15 @@ export function formatPln(value: number): string {
 
 export function formatPercent(value: number): string {
   return PERCENT_FORMAT.format(value);
+}
+
+// The sign is written by hand, like in formatSignedPln: zero has none ("0,0%", never "+0,0%").
+export function formatSignedPercent(value: number): string {
+  if (value === 0) {
+    return CHANGE_FORMAT.format(0);
+  }
+  const sign = value > 0 ? "+" : "-";
+  return `${sign}${CHANGE_FORMAT.format(Math.abs(value))}`;
 }
 
 export function formatForeignAmount(

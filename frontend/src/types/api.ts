@@ -220,3 +220,19 @@ export type RecurringPaymentRequest = {
   // Must be an expense category, the user's own or a system one.
   readonly categoryId: number;
 };
+
+// Response of GET /api/v1/dashboard/summary (DashboardSummaryResponse).
+export type DashboardSummaryResponse = {
+  // Calendar month the sums refer to, "RRRR-MM" (Europe/Warsaw).
+  readonly month: string;
+  // Display only: amounts are BigDecimal in the backend, never summed or compared here.
+  // The balance counts the transactions up to and including today.
+  readonly availableFunds: number;
+  // One decimal place; null when there is no earlier balance to compare with (balance <= 0).
+  readonly availableFundsChangePercent: number | null;
+  // The whole calendar month, including the days after today.
+  readonly monthExpenses: number;
+  readonly monthIncome: number;
+  // Sum of the limits of this month; null when none is set ("no limit" is not "0").
+  readonly monthLimitTotal: number | null;
+};

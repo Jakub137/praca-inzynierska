@@ -1,14 +1,16 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import DashboardPage, { metadata } from "@/app/(app)/dashboard/page";
 
+vi.mock("@/components/dashboard/DashboardView", () => ({
+  DashboardView: () => <p>Widok strony głównej</p>,
+}));
+
 describe("DashboardPage", () => {
-  it("renders the page heading", () => {
+  it("renders the dashboard view", () => {
     render(<DashboardPage />);
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Strona Główna" }),
-    ).toBeDefined();
+    expect(screen.getByText("Widok strony głównej")).toBeDefined();
   });
 
   it("sets the page title for the %s | Saldo template", () => {
