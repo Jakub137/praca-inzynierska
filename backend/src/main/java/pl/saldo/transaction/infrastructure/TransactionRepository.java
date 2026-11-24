@@ -48,6 +48,23 @@ public interface TransactionRepository
 			@Param("startDate") LocalDate startDate,
 			@Param("endDate") LocalDate endDate);
 
+	// Same SUM for every category the user spent in (no category filter); the name comes from the same SELECT.
+	// The half-open range [startDate, endDate) keeps idx_transactions_user_date usable. The user filter is
+	// essential: system categories are shared by all users.
+	@Query("""
+			select new pl.saldo.transaction.infrastructure.CategoryExpenseTotal(
+				t.category.id, t.category.name, sum(t.amountPln))
+			from TransactionEntity t
+			where t.userId = :userId
+				and t.type = pl.saldo.transaction.domain.TransactionType.EXPENSE
+				and t.transactionDate >= :startDate
+				and t.transactionDate < :endDate
+			group by t.category.id, t.category.name""")
+	List<CategoryExpenseTotal> sumAllExpensesByCategory(
+			@Param("userId") UUID userId,
+			@Param("startDate") LocalDate startDate,
+			@Param("endDate") LocalDate endDate);
+
 	// Totals per transaction type for every transaction dated before endDate (exclusive): with endDate = today + 1
 	// day this is the balance up to and including today. The user filter is essential (shared system categories).
 	@Query("""

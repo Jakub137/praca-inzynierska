@@ -23,9 +23,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
+import pl.saldo.ai.domain.SpendingAnomaly;
 import pl.saldo.ai.usecase.CachedCategorySuggestionUseCase;
 import pl.saldo.ai.usecase.CategorySuggestion;
 import pl.saldo.ai.usecase.CategorySuggestion.Source;
+import pl.saldo.ai.usecase.GetDashboardInsightUseCase;
 import pl.saldo.ai.usecase.SuggestCategoryCommand;
 import pl.saldo.currency.domain.SupportedCurrency;
 import pl.saldo.shared.config.ClockConfiguration;
@@ -40,6 +42,7 @@ import pl.saldo.user.infrastructure.UserRepository;
 class AiControllerTest {
 
 	private static final String SUGGEST_URI = "/api/v1/ai/suggest-category";
+	private static final String INSIGHT_URI = "/api/v1/ai/dashboard-insight";
 	private static final String TOKEN = "jwt-value";
 	private static final UUID USER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 	private static final Instant NOW = Instant.parse("2026-11-24T10:00:00Z");
@@ -49,12 +52,17 @@ class AiControllerTest {
 			{"description": "Biedronka zakupy na weekend", "amount": 184.50}""";
 	private static final CategorySuggestion SUGGESTION =
 			new CategorySuggestion(5L, "Artykuły spożywcze", 94, Source.AI);
+	private static final SpendingAnomaly INSIGHT = new SpendingAnomaly(
+			2L, "Rozrywka", 42, new BigDecimal("142.00"), new BigDecimal("100.00"));
 
 	@Autowired
 	private MockMvcTester mvc;
 
 	@MockitoBean
 	private CachedCategorySuggestionUseCase cachedCategorySuggestionUseCase;
+
+	@MockitoBean
+	private GetDashboardInsightUseCase getDashboardInsightUseCase;
 
 	@MockitoBean
 	private JwtService jwtService;
@@ -205,11 +213,61 @@ class AiControllerTest {
 		then(cachedCategorySuggestionUseCase).shouldHaveNoInteractions();
 	}
 
+	@Test
+	void shouldReturn200WithDashboardInsight() {
+		authenticate();
+		given(getDashboardInsightUseCase.execute(USER_ID)).willReturn(Optional.of(INSIGHT));
+
+		MvcTestResult result = getInsight();
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyJson().extractingPath("$.categoryId").isEqualTo(2);
+		assertThat(result).bodyJson().extractingPath("$.categoryName").isEqualTo("Rozrywka");
+		assertThat(result).bodyJson().extractingPath("$.increasePercent").isEqualTo(42);
+		assertThat(result).bodyJson().extractingPath("$.currentAmount").isEqualTo(142.0);
+		assertThat(result).bodyJson().extractingPath("$.averageAmount").isEqualTo(100.0);
+		assertThat(result).bodyJson().extractingPath("$.message")
+				.isEqualTo("W kategorii Rozrywka wydałeś o 42% więcej niż średnio w ostatnich 3 miesiącach.");
+		assertThat(result).bodyJson().doesNotHavePath("$.userId");
+	}
+
+	@Test
+	void shouldReturn200WithNullFieldsWhenThereIsNoAnomaly() {
+		authenticate();
+		given(getDashboardInsightUseCase.execute(USER_ID)).willReturn(Optional.empty());
+
+		MvcTestResult result = getInsight();
+
+		assertThat(result).hasStatus(HttpStatus.OK);
+		assertThat(result).bodyJson().hasPath("$.categoryId");
+		assertThat(result).bodyJson().hasPath("$.message");
+		assertThat(result).bodyJson().extractingPath("$.categoryId").isNull();
+		assertThat(result).bodyJson().extractingPath("$.categoryName").isNull();
+		assertThat(result).bodyJson().extractingPath("$.increasePercent").isNull();
+		assertThat(result).bodyJson().extractingPath("$.currentAmount").isNull();
+		assertThat(result).bodyJson().extractingPath("$.averageAmount").isNull();
+		assertThat(result).bodyJson().extractingPath("$.message").isNull();
+	}
+
+	@Test
+	void shouldReturn401ForInsightWithoutTokenAndNotCallUseCase() {
+		MvcTestResult result = mvc.get().uri(INSIGHT_URI).exchange();
+
+		assertThat(result).hasStatus(HttpStatus.UNAUTHORIZED);
+		then(getDashboardInsightUseCase).shouldHaveNoInteractions();
+	}
+
 	private MvcTestResult suggest(String body) {
 		return mvc.post().uri(SUGGEST_URI)
 				.header(HttpHeaders.AUTHORIZATION, bearer())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(body)
+				.exchange();
+	}
+
+	private MvcTestResult getInsight() {
+		return mvc.get().uri(INSIGHT_URI)
+				.header(HttpHeaders.AUTHORIZATION, bearer())
 				.exchange();
 	}
 

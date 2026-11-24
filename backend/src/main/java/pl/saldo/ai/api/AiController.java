@@ -3,6 +3,7 @@ package pl.saldo.ai.api;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,18 +17,23 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import pl.saldo.ai.usecase.CachedCategorySuggestionUseCase;
+import pl.saldo.ai.usecase.GetDashboardInsightUseCase;
 import pl.saldo.ai.usecase.SuggestCategoryCommand;
 import pl.saldo.shared.security.UserPrincipal;
 
 @RestController
 @RequestMapping("/api/v1/ai")
-@Tag(name = "AI", description = "Podpowiedzi modułu AI")
+@Tag(name = "AI", description = "Podpowiedzi i analizy modułu AI")
 public class AiController {
 
 	private final CachedCategorySuggestionUseCase cachedCategorySuggestionUseCase;
+	private final GetDashboardInsightUseCase getDashboardInsightUseCase;
 
-	public AiController(CachedCategorySuggestionUseCase cachedCategorySuggestionUseCase) {
+	public AiController(
+			CachedCategorySuggestionUseCase cachedCategorySuggestionUseCase,
+			GetDashboardInsightUseCase getDashboardInsightUseCase) {
 		this.cachedCategorySuggestionUseCase = cachedCategorySuggestionUseCase;
+		this.getDashboardInsightUseCase = getDashboardInsightUseCase;
 	}
 
 	@PostMapping("/suggest-category")
@@ -63,6 +69,34 @@ public class AiController {
 		return ResponseEntity.ok(cachedCategorySuggestionUseCase.execute(principal.id(), command)
 				.map(CategorySuggestionResponse::fromSuggestion)
 				.orElseGet(CategorySuggestionResponse::empty));
+	}
+
+	@GetMapping("/dashboard-insight")
+	@Operation(
+			summary = "Wniosek dla strony głównej: największy wzrost wydatków w kategorii",
+			description = "Porównuje wydatki bieżącego miesiąca (strefa Europe/Warsaw, kwoty w PLN) z średnią z trzech "
+					+ "poprzednich pełnych miesięcy i zwraca kategorię z największym wzrostem powyżej 30% (przy remisie "
+					+ "decyduje większa kwota, potem nazwa kategorii). Brane są tylko kategorie z wydatkami w każdym z "
+					+ "trzech poprzednich miesięcy. Wniosek jest liczony regułą, bez modelu językowego i bez wysyłania "
+					+ "danych do dostawcy AI. Gdy nie ma anomalii, wszystkie pola odpowiedzi są puste (null), a kod to "
+					+ "nadal 200. Endpoint niczego nie zapisuje.")
+	@ApiResponses({
+			@ApiResponse(
+					responseCode = "200",
+					description = "Wniosek albo odpowiedź z pustymi polami, gdy nie wykryto anomalii",
+					content = @Content(schema = @Schema(implementation = DashboardInsightResponse.class))),
+			@ApiResponse(
+					responseCode = "401",
+					description = "Brak tokena, token nieprawidłowy lub wygasły",
+					content = @Content(
+							mediaType = "application/problem+json",
+							schema = @Schema(implementation = ProblemDetail.class)))
+	})
+	public ResponseEntity<DashboardInsightResponse> getDashboardInsight(
+			@AuthenticationPrincipal UserPrincipal principal) {
+		return ResponseEntity.ok(getDashboardInsightUseCase.execute(principal.id())
+				.map(DashboardInsightResponse::fromAnomaly)
+				.orElseGet(DashboardInsightResponse::empty));
 	}
 
 }
