@@ -24,3 +24,10 @@ app:
     expiration: 24h
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+  ai:
+    api-key: ${GEMINI_API_KEY:}
+    base-url: https://generativelanguage.googleapis.com
+    model: gemini-3.1-flash-lite
+    thinking-level: minimal
+    max-output-tokens: 1024
+    timeout: 5000ms
