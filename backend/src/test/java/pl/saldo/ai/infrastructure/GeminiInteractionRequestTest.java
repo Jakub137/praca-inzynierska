@@ -45,4 +45,18 @@ class GeminiInteractionRequestTest {
 		assertThat(actual.get("generation_config").has("temperature")).isFalse();
 	}
 
+	@Test
+	void shouldSerializeSystemInstructionWhenPresent() {
+		AiProperties properties = new AiProperties(
+				"key", "https://example.test", "gemini-3.1-flash-lite", "minimal", 1024, Duration.ofMillis(5000));
+		AiJsonRequest request = new AiJsonRequest(
+				"Biedronka zakupy", "Classify one transaction.", Map.of("type", "object"));
+
+		JsonNode actual = jsonMapper.readTree(jsonMapper.writeValueAsString(
+				GeminiInteractionRequest.from(request, properties)));
+
+		assertThat(actual.get("system_instruction").asString()).isEqualTo("Classify one transaction.");
+		assertThat(actual.get("input").asString()).isEqualTo("Biedronka zakupy");
+	}
+
 }
