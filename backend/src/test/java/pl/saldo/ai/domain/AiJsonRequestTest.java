@@ -33,4 +33,20 @@ class AiJsonRequestTest {
 		assertThat(request.responseSchema()).containsEntry("type", "object");
 	}
 
+	@Test
+	void shouldTreatBlankSystemInstructionAsAbsent() {
+		AiJsonRequest request = new AiJsonRequest("Biedronka", "  ", Map.of());
+
+		assertThat(request.systemInstruction()).isNull();
+	}
+
+	@Test
+	void shouldKeepSystemInstructionAndLeaveItNullInShortConstructor() {
+		AiJsonRequest withInstruction = new AiJsonRequest("Biedronka", "Classify.", Map.of());
+		AiJsonRequest withoutInstruction = new AiJsonRequest("Biedronka", Map.of());
+
+		assertThat(withInstruction.systemInstruction()).isEqualTo("Classify.");
+		assertThat(withoutInstruction.systemInstruction()).isNull();
+	}
+
 }

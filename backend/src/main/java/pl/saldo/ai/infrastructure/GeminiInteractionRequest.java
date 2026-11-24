@@ -2,6 +2,7 @@ package pl.saldo.ai.infrastructure;
 
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import pl.saldo.ai.domain.AiJsonRequest;
@@ -9,6 +10,7 @@ import pl.saldo.ai.domain.AiJsonRequest;
 record GeminiInteractionRequest(
 		String model,
 		String input,
+		@JsonProperty("system_instruction") @JsonInclude(JsonInclude.Include.NON_NULL) String systemInstruction,
 		boolean store,
 		@JsonProperty("response_format") ResponseFormat responseFormat,
 		@JsonProperty("generation_config") GenerationConfig generationConfig) {
@@ -22,7 +24,8 @@ record GeminiInteractionRequest(
 		ResponseFormat responseFormat = new ResponseFormat(TEXT_TYPE, JSON_MIME_TYPE, request.responseSchema());
 		GenerationConfig generationConfig = new GenerationConfig(properties.thinkingLevel(), properties.maxOutputTokens());
 		return new GeminiInteractionRequest(
-				properties.model(), request.prompt(), STORE_INTERACTION, responseFormat, generationConfig);
+				properties.model(), request.prompt(), request.systemInstruction(), STORE_INTERACTION,
+				responseFormat, generationConfig);
 	}
 
 	record ResponseFormat(String type, @JsonProperty("mime_type") String mimeType, Map<String, Object> schema) {
