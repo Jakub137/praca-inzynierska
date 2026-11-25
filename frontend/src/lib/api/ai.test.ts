@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { suggestCategory } from "@/lib/api/ai";
+import { getDashboardInsight, suggestCategory } from "@/lib/api/ai";
 import { AI_GROCERIES, NO_SUGGESTION } from "@/test-utils/categorySuggestion";
+import {
+  NO_INSIGHT_RESPONSE,
+  TEST_INSIGHT_RESPONSE,
+} from "@/test-utils/dashboardInsight";
 
 const BASE_URL = "http://localhost:8080/api/v1";
 const fetchMock = vi.fn<typeof fetch>();
@@ -60,5 +64,28 @@ describe("AI API", () => {
     });
 
     expect(result).toEqual(NO_SUGGESTION);
+  });
+
+  it("gets the dashboard insight with the Bearer token", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(TEST_INSIGHT_RESPONSE));
+
+    const result = await getDashboardInsight("abc");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE_URL}/ai/dashboard-insight`);
+    expect(init?.method).toBe("GET");
+    expect(init?.headers).toEqual({
+      Accept: "application/json",
+      Authorization: "Bearer abc",
+    });
+    expect(result).toEqual(TEST_INSIGHT_RESPONSE);
+  });
+
+  it("keeps null in every field when there is no anomaly", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(NO_INSIGHT_RESPONSE));
+
+    const result = await getDashboardInsight("abc");
+
+    expect(result).toEqual(NO_INSIGHT_RESPONSE);
   });
 });

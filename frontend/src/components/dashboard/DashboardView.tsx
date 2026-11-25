@@ -1,11 +1,13 @@
 "use client";
 
+import { AiInsightBanner } from "@/components/dashboard/AiInsightBanner";
 import { BudgetPreviewCard } from "@/components/dashboard/BudgetPreviewCard";
 import { PrimaryGoalCard } from "@/components/dashboard/PrimaryGoalCard";
 import { RecentTransactionsCard } from "@/components/dashboard/RecentTransactionsCard";
 import { SavingsMetricCard } from "@/components/dashboard/SavingsMetricCard";
 import { SummaryMetricCards } from "@/components/dashboard/SummaryMetricCards";
 import { useBudgetUsage } from "@/hooks/useBudgetUsage";
+import { useDashboardInsight } from "@/hooks/useDashboardInsight";
 import { useDashboardSummary } from "@/hooks/useDashboardSummary";
 import { useRecentTransactions } from "@/hooks/useRecentTransactions";
 import { useSavingsGoals } from "@/hooks/useSavingsGoals";
@@ -19,6 +21,8 @@ export function DashboardView() {
   const transactions = useRecentTransactions();
   // null: the current month, picked by the backend (Europe/Warsaw).
   const budgets = useBudgetUsage(null);
+  // A hint without its own skeleton or error message (see AiInsightBanner).
+  const insight = useDashboardInsight();
 
   if (summary.state.status === "idle") {
     return null;
@@ -41,6 +45,7 @@ export function DashboardView() {
         <SummaryMetricCards state={summary.state} onRetry={summary.retry} />
         <SavingsMetricCard state={goals.state} onRetry={goals.retry} />
       </div>
+      <AiInsightBanner state={insight.state} />
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
         <RecentTransactionsCard
           state={transactions.state}

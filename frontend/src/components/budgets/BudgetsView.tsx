@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   BudgetCard,
@@ -15,7 +16,7 @@ import { RetryError } from "@/components/ui/RetryError";
 import { type BudgetUsageState, useBudgetUsage } from "@/hooks/useBudgetUsage";
 import { useEditFocusRestore } from "@/hooks/useEditFocusRestore";
 import { useSetBudgetLimit } from "@/hooks/useSetBudgetLimit";
-import { monthToBudgetPeriod } from "@/lib/budgets/period";
+import { buildBudgetsHref, monthToBudgetPeriod } from "@/lib/budgets/period";
 import type { MonthOption } from "@/lib/transactions/months";
 import type { BudgetUsageResponse } from "@/types/api";
 
@@ -25,12 +26,15 @@ type BudgetsViewProps = {
   // "RRRR-MM" from the address, or null for the current month.
   month: string | null;
   monthOptions: readonly MonthOption[];
+  // Category id from "?edit=" (the dashboard banner), or null when the address has none.
+  editCategoryId: number | null;
 };
 
 type ActiveState = Exclude<BudgetUsageState, { readonly status: "idle" }>;
 
 type LimitDialogState =
-  | { readonly mode: "create" }
+  // categoryId: the category chosen at opening; set only by "?edit=".
+  | { readonly mode: "create"; readonly categoryId?: number }
   | { readonly mode: "edit"; readonly limit: BudgetUsageResponse };
 
 type BudgetsResultsProps = {
@@ -68,11 +72,40 @@ function BudgetsResults({ state, onRetry, onEdit }: BudgetsResultsProps) {
   );
 }
 
-export function BudgetsView({ month, monthOptions }: BudgetsViewProps) {
+// "?edit=" (the dashboard banner) opens the dialog of that category once the usage is known: edit when
+// the category has a limit in the shown month, otherwise a new limit with the category chosen.
+function resolveRequestedDialog(
+  state: BudgetUsageState,
+  editCategoryId: number | null,
+  handledEditId: number | null,
+): LimitDialogState | null {
+  if (
+    editCategoryId === null ||
+    editCategoryId === handledEditId ||
+    state.status !== "ready"
+  ) {
+    return null;
+  }
+  const limit = state.usage.find(
+    (usage) => usage.categoryId === editCategoryId,
+  );
+  return limit === undefined
+    ? { mode: "create", categoryId: editCategoryId }
+    : { mode: "edit", limit };
+}
+
+export function BudgetsView({
+  month,
+  monthOptions,
+  editCategoryId,
+}: BudgetsViewProps) {
+  const router = useRouter();
   const { state, retry } = useBudgetUsage(month);
   const addButtonRef = useRef<HTMLButtonElement | null>(null);
   const editOpenerRef = useRef<HTMLElement | null>(null);
   const [dialog, setDialog] = useState<LimitDialogState | null>(null);
+  // The address keeps "?edit=" until the router has replaced it; the handled id keeps the dialog from reopening meanwhile.
+  const [handledEditId, setHandledEditId] = useState<number | null>(null);
   // After a saved edit the usage reloads and the cards are rebuilt: the focus goes back to the same card.
   const requestEditFocus = useEditFocusRestore(state, addButtonRef);
   // No month in the address means the first option of the list (the current month).
@@ -86,15 +119,30 @@ export function BudgetsView({ month, monthOptions }: BudgetsViewProps) {
     state.status === "ready"
       ? state.usage.map((usage) => usage.categoryId)
       : NO_CATEGORY_IDS;
+  // A dialog opened by a button wins over the one requested by the address.
+  const activeDialog =
+    dialog ?? resolveRequestedDialog(state, editCategoryId, handledEditId);
+  // A dialog opened by the address has no opener button: the focus goes back to the add button.
+  const editReturnFocusRef = dialog === null ? addButtonRef : editOpenerRef;
+
+  // Closing removes "?edit=", so a reload or Back does not open the dialog again.
+  function closeDialog() {
+    setDialog(null);
+    if (editCategoryId === null) {
+      return;
+    }
+    setHandledEditId(editCategoryId);
+    router.replace(buildBudgetsHref(month), { scroll: false });
+  }
 
   // Order matters: remember the card for the focus, close the dialog, reload the usage, then the hook
   // shows the toast. A new limit needs no focus request: the add button stays on the page.
   const saveLimit = useSetBudgetLimit({
     onSaved: (request) => {
-      if (dialog?.mode === "edit") {
+      if (activeDialog?.mode === "edit") {
         requestEditFocus(String(request.categoryId));
       }
-      setDialog(null);
+      closeDialog();
       retry();
     },
   });
@@ -119,26 +167,27 @@ export function BudgetsView({ month, monthOptions }: BudgetsViewProps) {
         </Button>
       </div>
       <BudgetsResults state={state} onRetry={retry} onEdit={openEditDialog} />
-      {dialog?.mode === "create" && (
+      {activeDialog?.mode === "create" && (
         <LimitDialog
           mode="create"
           period={period}
           periodLabel={periodLabel}
           takenCategoryIds={takenCategoryIds}
+          initialCategoryId={activeDialog.categoryId}
           returnFocusRef={addButtonRef}
-          onClose={() => setDialog(null)}
+          onClose={closeDialog}
           onSubmit={saveLimit}
         />
       )}
-      {dialog?.mode === "edit" && (
+      {activeDialog?.mode === "edit" && (
         <LimitDialog
-          key={dialog.limit.categoryId}
+          key={activeDialog.limit.categoryId}
           mode="edit"
           period={period}
           periodLabel={periodLabel}
-          limit={dialog.limit}
-          returnFocusRef={editOpenerRef}
-          onClose={() => setDialog(null)}
+          limit={activeDialog.limit}
+          returnFocusRef={editReturnFocusRef}
+          onClose={closeDialog}
           onSubmit={saveLimit}
         />
       )}
