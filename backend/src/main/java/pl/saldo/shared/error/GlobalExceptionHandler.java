@@ -22,6 +22,7 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import jakarta.servlet.http.HttpServletRequest;
+import pl.saldo.analytics.domain.InvalidAnalyticsQueryException;
 import pl.saldo.budget.domain.BudgetCategoryNotExpenseException;
 import pl.saldo.budget.domain.BudgetLimitConflictException;
 import pl.saldo.budget.domain.InvalidBudgetUsageQueryException;
@@ -121,6 +122,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler(InvalidBudgetUsageQueryException.class)
 	public ProblemDetail handleInvalidBudgetUsageQuery(InvalidBudgetUsageQueryException ex) {
+		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.INVALID_QUERY);
+		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
+		return problem;
+	}
+
+	@ExceptionHandler(InvalidAnalyticsQueryException.class)
+	public ProblemDetail handleInvalidAnalyticsQuery(InvalidAnalyticsQueryException ex) {
 		ProblemDetail problem = problem(HttpStatus.BAD_REQUEST, ErrorMessages.INVALID_QUERY);
 		problem.setProperty(FIELD_ERRORS_PROPERTY, ex.getFieldErrors());
 		return problem;
