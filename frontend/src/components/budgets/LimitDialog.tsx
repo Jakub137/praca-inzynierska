@@ -14,6 +14,7 @@ import { useLimitForm } from "@/hooks/useLimitForm";
 import {
   createEmptyLimitValues,
   getAssignableCategories,
+  type LimitFormValues,
   toLimitFormValues,
 } from "@/lib/budgets/limitForm";
 import type { BudgetPeriod } from "@/lib/budgets/period";
@@ -36,6 +37,8 @@ type CreateProps = SharedProps & {
   mode: "create";
   // Categories that already have a limit in the shown month.
   takenCategoryIds: readonly number[];
+  // Category chosen when the dialog opens (the dashboard banner); a free expense category.
+  initialCategoryId?: number;
 };
 
 type EditProps = SharedProps & {
@@ -96,10 +99,20 @@ function AllCategoriesTakenDialog({
   );
 }
 
+function createInitialValues(
+  initialCategoryId: number | undefined,
+): LimitFormValues {
+  const values = createEmptyLimitValues();
+  return initialCategoryId === undefined
+    ? values
+    : { ...values, categoryId: String(initialCategoryId) };
+}
+
 function CreateLimitDialog({
   period,
   periodLabel,
   takenCategoryIds,
+  initialCategoryId,
   onClose,
   onSubmit,
   returnFocusRef,
@@ -111,7 +124,7 @@ function CreateLimitDialog({
       ? getAssignableCategories(categoriesState.categories, takenCategoryIds)
       : NO_CATEGORIES;
   const form = useLimitForm({
-    initialValues: createEmptyLimitValues(),
+    initialValues: createInitialValues(initialCategoryId),
     allowedCategoryIds: options.map((option) => option.id),
     period,
     onSubmit,

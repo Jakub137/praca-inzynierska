@@ -13,9 +13,18 @@ export function monthToBudgetPeriod(month: string): BudgetPeriod {
 }
 
 // No month in the address means "the current month": the backend picks it.
-export function buildBudgetsHref(month: string | null): string {
-  if (month === null) {
-    return BUDGETS_PATH;
+// editCategoryId: the limit dialog of this category opens when the page loads (the dashboard banner).
+export function buildBudgetsHref(
+  month: string | null,
+  editCategoryId: number | null = null,
+): string {
+  const query = new URLSearchParams();
+  if (month !== null) {
+    query.set("month", month);
   }
-  return `${BUDGETS_PATH}?${new URLSearchParams({ month }).toString()}`;
+  if (editCategoryId !== null) {
+    query.set("edit", String(editCategoryId));
+  }
+  const queryString = query.toString();
+  return queryString === "" ? BUDGETS_PATH : `${BUDGETS_PATH}?${queryString}`;
 }

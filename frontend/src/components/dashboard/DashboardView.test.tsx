@@ -6,6 +6,10 @@ import type {
   UseBudgetUsageResult,
 } from "@/hooks/useBudgetUsage";
 import type {
+  DashboardInsightState,
+  UseDashboardInsightResult,
+} from "@/hooks/useDashboardInsight";
+import type {
   DashboardSummaryState,
   UseDashboardSummaryResult,
 } from "@/hooks/useDashboardSummary";
@@ -19,6 +23,7 @@ import type {
 } from "@/hooks/useSavingsGoals";
 import { TEST_BUDGET_USAGE } from "@/test-utils/budgets";
 import { TEST_SUMMARY } from "@/test-utils/dashboard";
+import { TEST_INSIGHT_MESSAGE } from "@/test-utils/dashboardInsight";
 import { TEST_GOALS, TEST_TODAY } from "@/test-utils/goals";
 import { makePage, TEST_TRANSACTIONS } from "@/test-utils/transactions";
 
@@ -34,6 +39,9 @@ const useRecentTransactionsMock = vi.hoisted(() =>
 const useBudgetUsageMock = vi.hoisted(() =>
   vi.fn<(month: string | null) => UseBudgetUsageResult>(),
 );
+const useDashboardInsightMock = vi.hoisted(() =>
+  vi.fn<() => UseDashboardInsightResult>(),
+);
 
 vi.mock("@/hooks/useDashboardSummary", () => ({
   useDashboardSummary: useDashboardSummaryMock,
@@ -48,12 +56,16 @@ vi.mock("@/hooks/useRecentTransactions", () => ({
 vi.mock("@/hooks/useBudgetUsage", () => ({
   useBudgetUsage: useBudgetUsageMock,
 }));
+vi.mock("@/hooks/useDashboardInsight", () => ({
+  useDashboardInsight: useDashboardInsightMock,
+}));
 
 type ViewStates = {
   summary: DashboardSummaryState;
   goals: SavingsGoalsState;
   transactions: RecentTransactionsState;
   budgets: BudgetUsageState;
+  insight: DashboardInsightState;
 };
 
 const READY_STATES: ViewStates = {
@@ -61,6 +73,7 @@ const READY_STATES: ViewStates = {
   goals: { status: "ready", goals: TEST_GOALS, today: TEST_TODAY },
   transactions: { status: "ready", page: makePage(TEST_TRANSACTIONS) },
   budgets: { status: "ready", usage: TEST_BUDGET_USAGE },
+  insight: { status: "ready", insight: null },
 };
 
 function renderView(overrides: Partial<ViewStates> = {}) {
@@ -70,6 +83,7 @@ function renderView(overrides: Partial<ViewStates> = {}) {
     goals: vi.fn(),
     transactions: vi.fn(),
     budgets: vi.fn(),
+    insight: vi.fn(),
   };
   useDashboardSummaryMock.mockReturnValue({
     state: states.summary,
@@ -87,9 +101,22 @@ function renderView(overrides: Partial<ViewStates> = {}) {
     state: states.budgets,
     retry: retries.budgets,
   });
+  useDashboardInsightMock.mockReturnValue({
+    state: states.insight,
+    retry: retries.insight,
+  });
   const result = render(<DashboardView />);
   return { ...result, retries };
 }
+
+const INSIGHT_READY: DashboardInsightState = {
+  status: "ready",
+  insight: {
+    categoryId: 2,
+    categoryName: "Rozrywka",
+    message: TEST_INSIGHT_MESSAGE,
+  },
+};
 
 describe("DashboardView", () => {
   beforeEach(() => {
@@ -180,5 +207,40 @@ describe("DashboardView", () => {
     fireEvent.click(buttons[1]);
 
     expect(retries.goals).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the AI banner below the metric cards and above the widgets", () => {
+    renderView({ insight: INSIGHT_READY });
+
+    expect(
+      screen.getByRole("region", { name: "Sugestia modułu AI" }),
+    ).toBeDefined();
+    const text = document.body.textContent ?? "";
+    expect(text.indexOf("Odłożone na cele")).toBeLessThan(
+      text.indexOf(TEST_INSIGHT_MESSAGE),
+    );
+    expect(text.indexOf(TEST_INSIGHT_MESSAGE)).toBeLessThan(
+      text.indexOf("Ostatnie Transakcje"),
+    );
+  });
+
+  it("shows no banner when there is no anomaly", () => {
+    renderView();
+
+    expect(
+      screen.queryByRole("region", { name: "Sugestia modułu AI" }),
+    ).toBeNull();
+  });
+
+  it("shows neither a banner nor a message when the insight fails", () => {
+    renderView({ insight: { status: "error" } });
+
+    expect(
+      screen.queryByRole("region", { name: "Sugestia modułu AI" }),
+    ).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Dostępne środki" }),
+    ).toBeDefined();
   });
 });

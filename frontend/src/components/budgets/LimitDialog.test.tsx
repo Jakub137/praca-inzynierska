@@ -29,11 +29,13 @@ const ALL_TAKEN_MESSAGE =
 
 type RenderOptions = {
   takenCategoryIds?: readonly number[];
+  initialCategoryId?: number;
   onSubmit?: Submit;
 };
 
 function renderCreate({
   takenCategoryIds = [],
+  initialCategoryId,
   onSubmit = () => Promise.resolve(),
 }: RenderOptions = {}) {
   const onClose = vi.fn();
@@ -44,6 +46,7 @@ function renderCreate({
       period={PERIOD}
       periodLabel="Listopad 2026"
       takenCategoryIds={takenCategoryIds}
+      initialCategoryId={initialCategoryId}
       onClose={onClose}
       onSubmit={submit}
     />,
@@ -214,6 +217,38 @@ describe("LimitDialog", () => {
         year: 2026,
         limitAmount: 1200.5,
       });
+    });
+
+    it("starts with the given category chosen", () => {
+      renderCreate({ initialCategoryId: 2 });
+
+      expect((screen.getByLabelText(CATEGORY) as HTMLSelectElement).value).toBe(
+        "2",
+      );
+    });
+
+    it("sends the given category without choosing it again", async () => {
+      const { onSubmit } = renderCreate({ initialCategoryId: 2 });
+
+      fill(AMOUNT, "1200");
+      await saveAndSettle("Zapisz limit");
+
+      expect(onSubmit).toHaveBeenCalledWith({
+        categoryId: 2,
+        month: 11,
+        year: 2026,
+        limitAmount: 1200,
+      });
+    });
+
+    it("asks for a category when the given one is not on the list", async () => {
+      const { onSubmit } = renderCreate({ initialCategoryId: 9 });
+
+      fill(AMOUNT, "1200");
+      await saveAndSettle("Zapisz limit");
+
+      expect(onSubmit).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert").textContent).toBe("Wybierz kategorię.");
     });
   });
 

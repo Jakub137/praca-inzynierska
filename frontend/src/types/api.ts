@@ -142,6 +142,20 @@ export type CategorySuggestionResponse = {
   readonly source: CategorySuggestionSource | null;
 };
 
+// Response of GET /api/v1/ai/dashboard-insight (DashboardInsightResponse).
+// Without an anomaly the backend still answers 200, with every field null.
+export type DashboardInsightResponse = {
+  readonly categoryId: number | null;
+  readonly categoryName: string | null;
+  // Whole percent.
+  readonly increasePercent: number | null;
+  // Display only (BigDecimal in the backend): never summed or compared here.
+  readonly currentAmount: number | null;
+  readonly averageAmount: number | null;
+  // Ready Polish sentence: shown as it is, never composed here.
+  readonly message: string | null;
+};
+
 export type BudgetStatus = "NORMAL" | "WARNING" | "EXCEEDED";
 
 // One position of GET /api/v1/budget-limits/usage (BudgetUsageResponse).

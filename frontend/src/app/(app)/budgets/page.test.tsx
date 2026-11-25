@@ -1,7 +1,17 @@
 import { render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import BudgetsPage, { metadata } from "@/app/(app)/budgets/page";
 import type { UseBudgetUsageResult } from "@/hooks/useBudgetUsage";
+import { TEST_BUDGET_USAGE } from "@/test-utils/budgets";
+import { installDialogStub } from "@/test-utils/dialog";
 
 const useBudgetUsageMock = vi.hoisted(() =>
   vi.fn<(month: string | null) => UseBudgetUsageResult>(),
@@ -11,7 +21,7 @@ vi.mock("@/hooks/useBudgetUsage", () => ({
   useBudgetUsage: useBudgetUsageMock,
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 vi.mock("@/hooks/useToast", () => ({
   useToast: () => ({ showToast: vi.fn() }),
@@ -24,6 +34,8 @@ async function renderPage(
 }
 
 describe("BudgetsPage", () => {
+  beforeAll(installDialogStub);
+
   beforeEach(() => {
     useBudgetUsageMock.mockReset();
     useBudgetUsageMock.mockReturnValue({
@@ -77,6 +89,31 @@ describe("BudgetsPage", () => {
       await renderPage({ month });
 
       expect(useBudgetUsageMock).toHaveBeenCalledWith(null);
+    },
+  );
+
+  it("opens the edit dialog of the category from ?edit=", async () => {
+    useBudgetUsageMock.mockReturnValue({
+      state: { status: "ready", usage: TEST_BUDGET_USAGE },
+      retry: vi.fn(),
+    });
+
+    await renderPage({ edit: "2" });
+
+    expect(screen.getByRole("dialog", { name: "Edytuj limit" })).toBeTruthy();
+  });
+
+  it.each(["abc", "0", "-2", "2.5"])(
+    "ignores the invalid ?edit= value %s",
+    async (edit) => {
+      useBudgetUsageMock.mockReturnValue({
+        state: { status: "ready", usage: TEST_BUDGET_USAGE },
+        retry: vi.fn(),
+      });
+
+      await renderPage({ edit });
+
+      expect(screen.queryByRole("dialog")).toBeNull();
     },
   );
 });

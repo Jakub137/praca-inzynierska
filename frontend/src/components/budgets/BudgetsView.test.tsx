@@ -33,6 +33,9 @@ const showToastMock = vi.hoisted(() => vi.fn<(message: string) => void>());
 const pushMock = vi.hoisted(() =>
   vi.fn<(href: string, options?: { scroll: boolean }) => void>(),
 );
+const replaceMock = vi.hoisted(() =>
+  vi.fn<(href: string, options?: { scroll: boolean }) => void>(),
+);
 
 vi.mock("@/hooks/useBudgetUsage", () => ({
   useBudgetUsage: useBudgetUsageMock,
@@ -50,20 +53,30 @@ vi.mock("@/hooks/useToast", () => ({
   useToast: () => ({ showToast: showToastMock }),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushMock }),
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
 }));
 
-function viewElement(month: string | null) {
-  return <BudgetsView month={month} monthOptions={TEST_MONTH_OPTIONS} />;
+function viewElement(
+  month: string | null,
+  editCategoryId: number | null = null,
+) {
+  return (
+    <BudgetsView
+      month={month}
+      monthOptions={TEST_MONTH_OPTIONS}
+      editCategoryId={editCategoryId}
+    />
+  );
 }
 
 function renderView(
   state: BudgetUsageState,
   month: string | null = null,
   retry: () => void = vi.fn(),
+  editCategoryId: number | null = null,
 ) {
   useBudgetUsageMock.mockReturnValue({ state, retry });
-  return render(viewElement(month));
+  return render(viewElement(month, editCategoryId));
 }
 
 const READY: BudgetUsageState = { status: "ready", usage: TEST_BUDGET_USAGE };
@@ -72,6 +85,7 @@ describe("BudgetsView", () => {
   beforeEach(() => {
     useBudgetUsageMock.mockReset();
     pushMock.mockReset();
+    replaceMock.mockReset();
   });
 
   it("renders nothing while the user is not authenticated", () => {
@@ -421,5 +435,139 @@ describe("BudgetsView limit dialogs", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Edytuj limit: Rozrywka" }),
     );
+  });
+});
+
+describe("BudgetsView opened with ?edit= in the address", () => {
+  const CATEGORY = "Kategoria *";
+  const AMOUNT = "Limit miesięczny (PLN) *";
+  const UPDATED: SetBudgetLimitResult = {
+    created: false,
+    limit: { id: 7, categoryId: 2, month: 11, year: 2026, limitAmount: 1200 },
+  };
+
+  beforeAll(installDialogStub);
+
+  beforeEach(() => {
+    useBudgetUsageMock.mockReset();
+    useCategoriesMock.mockReset();
+    setBudgetLimitMock.mockReset();
+    readSessionTokenMock.mockReset();
+    showToastMock.mockReset();
+    pushMock.mockReset();
+    replaceMock.mockReset();
+    useCategoriesMock.mockReturnValue({
+      status: "ready",
+      categories: TEST_CATEGORIES,
+    });
+    readSessionTokenMock.mockReturnValue("token");
+  });
+
+  function fill(label: string, value: string) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  }
+
+  async function save(name: string) {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name }));
+    });
+  }
+
+  it("opens the edit dialog of the category that has a limit", () => {
+    renderView(READY, null, vi.fn(), 2);
+
+    const dialog = screen.getByRole("dialog", { name: "Edytuj limit" });
+    expect(within(dialog).getByText("Rozrywka")).toBeTruthy();
+    expect((screen.getByLabelText(AMOUNT) as HTMLInputElement).value).toBe(
+      "1000,00",
+    );
+  });
+
+  it("opens a new limit with the category chosen when it has no limit yet", () => {
+    renderView({ status: "ready", usage: [NORMAL_USAGE] }, null, vi.fn(), 2);
+
+    expect(screen.getByRole("dialog", { name: "Nowy limit" })).toBeTruthy();
+    expect((screen.getByLabelText(CATEGORY) as HTMLSelectElement).value).toBe(
+      "2",
+    );
+  });
+
+  it("waits for the usage before it opens anything", () => {
+    const retry = vi.fn();
+    const { rerender } = renderView({ status: "loading" }, null, retry, 2);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    useBudgetUsageMock.mockReturnValue({ state: READY, retry });
+    rerender(viewElement(null, 2));
+
+    expect(screen.getByRole("dialog", { name: "Edytuj limit" })).toBeTruthy();
+  });
+
+  it("opens no dialog when the usage fails to load", () => {
+    renderView({ status: "error" }, null, vi.fn(), 2);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens no dialog without ?edit=", () => {
+    renderView(READY);
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("removes ?edit= on Anuluj, does not open the dialog again and focuses the add button", () => {
+    const retry = vi.fn();
+    const { rerender } = renderView(READY, null, retry, 2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
+
+    expect(replaceMock).toHaveBeenCalledWith("/budgets", { scroll: false });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // The address still has ?edit= until the router has replaced it.
+    rerender(viewElement(null, 2));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "+ Nowy limit" }),
+    );
+  });
+
+  it("keeps the month in the address when it removes ?edit=", () => {
+    renderView(READY, "2026-10", vi.fn(), 2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
+
+    expect(replaceMock).toHaveBeenCalledWith("/budgets?month=2026-10", {
+      scroll: false,
+    });
+  });
+
+  it("saves the limit, removes ?edit= and reloads the usage", async () => {
+    setBudgetLimitMock.mockResolvedValue(UPDATED);
+    const retry = vi.fn();
+    renderView(READY, null, retry, 2);
+
+    fill(AMOUNT, "1200");
+    await save("Zapisz zmiany");
+
+    expect(setBudgetLimitMock).toHaveBeenCalledWith("token", {
+      categoryId: 2,
+      month: 11,
+      year: 2026,
+      limitAmount: 1200,
+    });
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(replaceMock).toHaveBeenCalledWith("/budgets", { scroll: false });
+    expect(showToastMock).toHaveBeenCalledWith("Zaktualizowano limit");
+  });
+
+  it("leaves the address alone when the dialog was opened with a button", () => {
+    renderView(READY);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edytuj limit: Rozrywka" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Anuluj" }));
+
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });

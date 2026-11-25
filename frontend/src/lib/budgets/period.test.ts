@@ -19,4 +19,18 @@ describe("buildBudgetsHref", () => {
   it("puts the month into the query string", () => {
     expect(buildBudgetsHref("2026-10")).toBe("/budgets?month=2026-10");
   });
+
+  it("puts the category to edit into the query string", () => {
+    expect(buildBudgetsHref(null, 2)).toBe("/budgets?edit=2");
+  });
+
+  it("keeps the month next to the category to edit", () => {
+    expect(buildBudgetsHref("2026-10", 2)).toBe(
+      "/budgets?month=2026-10&edit=2",
+    );
+  });
+
+  it("leaves out the category to edit when it is null", () => {
+    expect(buildBudgetsHref("2026-10", null)).toBe("/budgets?month=2026-10");
+  });
 });
