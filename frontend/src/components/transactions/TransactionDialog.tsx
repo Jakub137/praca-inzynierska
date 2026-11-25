@@ -7,6 +7,7 @@ import {
 } from "@/components/transactions/TransactionFormFields";
 import { FormDialogFrame } from "@/components/ui/FormDialogFrame";
 import { type CategoriesState, useCategories } from "@/hooks/useCategories";
+import { useCategorySuggestion } from "@/hooks/useCategorySuggestion";
 import { useCurrencyRates } from "@/hooks/useCurrencyRates";
 import { useTransactionForm } from "@/hooks/useTransactionForm";
 import type { TransactionFormValues } from "@/lib/transactions/transactionForm";
@@ -79,6 +80,16 @@ export function TransactionDialog({
       : NO_CATEGORIES;
   const rates = ratesState.status === "ready" ? ratesState.rates : NO_RATES;
   const form = useTransactionForm({ initialValues, categories, onSubmit });
+  // Only a new transaction gets a suggestion; the suggested category is set like any other change.
+  const suggestion = useCategorySuggestion({
+    enabled: mode === "create",
+    description: form.values.description,
+    amount: form.values.amount,
+    type: form.selectedType,
+    categoryId: form.values.categoryId,
+    categories,
+    onSuggested: (categoryId) => form.setField("categoryId", categoryId),
+  });
   const texts = DIALOG_TEXTS[mode];
 
   return (
@@ -98,6 +109,8 @@ export function TransactionDialog({
         categoriesStatus={toCategoriesStatus(categoriesState)}
         rates={rates}
         savedTransaction={savedTransaction}
+        suggestion={suggestion.current}
+        onCategoryPicked={suggestion.markManualChoice}
       />
     </FormDialogFrame>
   );

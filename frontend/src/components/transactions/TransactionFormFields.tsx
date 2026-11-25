@@ -1,9 +1,11 @@
 "use client";
 
 import { useId } from "react";
+import { CategoryAiBadge } from "@/components/transactions/CategoryAiBadge";
 import { FormInput } from "@/components/ui/FormInput";
 import { SelectField } from "@/components/ui/SelectField";
 import type { TransactionFormState } from "@/hooks/useTransactionForm";
+import type { CategorySuggestion } from "@/lib/transactions/categorySuggestion";
 import {
   type AmountHintEdit,
   buildAmountHint,
@@ -33,6 +35,10 @@ type TransactionFormFieldsProps = {
   rates: readonly CurrencyRateResponse[];
   // Set in edit mode: the rate kept by the server decides the hint under the amount.
   savedTransaction?: TransactionResponse;
+  // The suggestion that still matches the form, or null.
+  suggestion: CategorySuggestion | null;
+  // Called when the user picks a category by hand.
+  onCategoryPicked: () => void;
 };
 
 type CategoryGroupProps = {
@@ -102,15 +108,35 @@ function toHintEdit(
   return saved === undefined ? undefined : { saved, date };
 }
 
+// Read out when the category is set without the user touching the field.
+function buildSuggestionAnnouncement(
+  suggestion: CategorySuggestion | null,
+  categories: readonly CategoryResponse[],
+): string {
+  const name = categories.find(
+    (category) => category.id === suggestion?.categoryId,
+  )?.name;
+  if (suggestion === null || name === undefined) {
+    return "";
+  }
+  return suggestion.aiConfidence === null
+    ? `Podpowiedź kategorii: ${name}.`
+    : `Podpowiedź kategorii: ${name}, trafność ${suggestion.aiConfidence}%.`;
+}
+
 export function TransactionFormFields({
   form,
   categories,
   categoriesStatus,
   rates,
   savedTransaction,
+  suggestion,
+  onCategoryPicked,
 }: TransactionFormFieldsProps) {
   const idPrefix = useId();
   const { values, errors, refs, setField } = form;
+  const badgeId = `${idPrefix}-category-badge`;
+  const aiConfidence = suggestion?.aiConfidence ?? null;
 
   // Destructured on purpose: after ref={refs.amount}, react-hooks/refs
   // reports every later refs.* read (facebook/react#34775).
@@ -122,9 +148,9 @@ export function TransactionFormFields({
   } = refs;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2.5">
       <p className="text-sm text-muted">Pola oznaczone * są wymagane.</p>
-      <div className="grid grid-cols-[minmax(0,1fr)_9rem] items-start gap-3">
+      <div className="grid grid-cols-1 items-start gap-x-3 gap-y-2.5 min-[23rem]:grid-cols-[minmax(0,1fr)_9rem]">
         <FormInput
           ref={amountRef}
           label="Kwota transakcji *"
@@ -177,13 +203,25 @@ export function TransactionFormFields({
         id={`${idPrefix}-category`}
         label="Kategoria *"
         value={values.categoryId}
-        onChange={(value) => setField("categoryId", value)}
+        onChange={(value) => {
+          onCategoryPicked();
+          setField("categoryId", value);
+        }}
         disabled={categoriesStatus !== "ready"}
         fullWidth
         error={getCategoryError(categoriesStatus, errors.categoryId)}
+        badge={
+          aiConfidence === null ? null : (
+            <CategoryAiBadge id={badgeId} confidence={aiConfidence} />
+          )
+        }
+        badgeId={badgeId}
       >
         <CategoryOptions status={categoriesStatus} categories={categories} />
       </SelectField>
+      <p role="status" className="sr-only">
+        {buildSuggestionAnnouncement(suggestion, categories)}
+      </p>
       <FormInput
         ref={dateRef}
         label="Data transakcji *"

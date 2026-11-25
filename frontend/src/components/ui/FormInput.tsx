@@ -74,18 +74,16 @@ export function FormInput({
           {hint}
         </p>
       )}
-      <div className="mt-1 min-h-5">
-        {error && (
-          <p
-            id={errorId}
-            role="alert"
-            className="flex items-start gap-1 text-sm text-danger"
-          >
-            <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
-            {error}
-          </p>
-        )}
-      </div>
+      {error && (
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1 flex items-start gap-1 text-sm text-danger"
+        >
+          <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }
