@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
+import pl.saldo.analytics.domain.InvalidAnalyticsQueryException;
 import pl.saldo.budget.domain.InvalidBudgetUsageQueryException;
 import pl.saldo.transaction.domain.InvalidTransactionQueryException;
 
@@ -68,6 +69,18 @@ class GlobalExceptionHandlerTest {
 		List<ApiFieldError> fieldErrors = List.of(new ApiFieldError("year", "Rok jest wymagany, gdy podano miesiąc"));
 
 		ProblemDetail problem = handler.handleInvalidBudgetUsageQuery(new InvalidBudgetUsageQueryException(fieldErrors));
+
+		assertProblem(problem, HttpStatus.BAD_REQUEST, "Błąd walidacji",
+				"Parametry zapytania są nieprawidłowe. Popraw zaznaczone parametry.");
+		assertThat(problem.getProperties()).containsEntry("fieldErrors", fieldErrors);
+	}
+
+	@Test
+	void shouldMapInvalidAnalyticsQueryTo400WithFieldErrors() {
+		List<ApiFieldError> fieldErrors = List.of(
+				new ApiFieldError("months", "Liczba miesięcy musi być liczbą całkowitą od 1 do 12"));
+
+		ProblemDetail problem = handler.handleInvalidAnalyticsQuery(new InvalidAnalyticsQueryException(fieldErrors));
 
 		assertProblem(problem, HttpStatus.BAD_REQUEST, "Błąd walidacji",
 				"Parametry zapytania są nieprawidłowe. Popraw zaznaczone parametry.");

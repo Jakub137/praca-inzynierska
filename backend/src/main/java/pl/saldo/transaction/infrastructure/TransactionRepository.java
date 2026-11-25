@@ -88,4 +88,20 @@ public interface TransactionRepository
 			@Param("startDate") LocalDate startDate,
 			@Param("endDate") LocalDate endDate);
 
+	// One row per (year, month, type) with at least one transaction. year()/month() appear only in SELECT and
+	// GROUP BY: the WHERE clause compares transaction_date directly with the half-open range [startDate, endDate),
+	// so idx_transactions_user_date stays usable. The user filter is essential (shared system categories).
+	@Query("""
+			select new pl.saldo.transaction.infrastructure.MonthlyTypeTotal(
+				year(t.transactionDate), month(t.transactionDate), t.type, sum(t.amountPln))
+			from TransactionEntity t
+			where t.userId = :userId
+				and t.transactionDate >= :startDate
+				and t.transactionDate < :endDate
+			group by year(t.transactionDate), month(t.transactionDate), t.type""")
+	List<MonthlyTypeTotal> sumByMonthAndType(
+			@Param("userId") UUID userId,
+			@Param("startDate") LocalDate startDate,
+			@Param("endDate") LocalDate endDate);
+
 }
