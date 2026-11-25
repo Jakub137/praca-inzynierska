@@ -122,6 +122,26 @@ export type CreateTransactionRequest = {
 // PUT replaces all fields, so it takes the same body as POST.
 export type UpdateTransactionRequest = CreateTransactionRequest;
 
+export type CategorySuggestionSource = "AI" | "KEYWORDS";
+
+// Request body of POST /api/v1/ai/suggest-category (SuggestCategoryCommand).
+export type SuggestCategoryRequest = {
+  // Trimmed, 1-100 characters.
+  readonly description: string;
+  // Optional and never passed on to the AI provider; sent only when it is a valid amount.
+  readonly amount?: number;
+  readonly type: TransactionType;
+};
+
+// Without a suggestion the backend still answers 200, with every field null.
+export type CategorySuggestionResponse = {
+  readonly categoryId: number | null;
+  readonly categoryName: string | null;
+  // Percent, 0-100.
+  readonly confidence: number | null;
+  readonly source: CategorySuggestionSource | null;
+};
+
 export type BudgetStatus = "NORMAL" | "WARNING" | "EXCEEDED";
 
 // One position of GET /api/v1/budget-limits/usage (BudgetUsageResponse).

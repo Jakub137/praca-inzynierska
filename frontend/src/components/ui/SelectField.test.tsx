@@ -84,9 +84,9 @@ describe("SelectField", () => {
       </SelectField>,
     );
 
-    expect(screen.getByRole("combobox").parentElement?.className).toContain(
-      "sm:w-56",
-    );
+    expect(
+      screen.getByRole("combobox").parentElement?.parentElement?.className,
+    ).toContain("sm:w-56");
 
     unmount();
     render(
@@ -95,9 +95,9 @@ describe("SelectField", () => {
       </SelectField>,
     );
 
-    expect(screen.getByRole("combobox").parentElement?.className).not.toContain(
-      "sm:w-56",
-    );
+    expect(
+      screen.getByRole("combobox").parentElement?.parentElement?.className,
+    ).not.toContain("sm:w-56");
   });
 
   it("disables the select", () => {
@@ -109,6 +109,81 @@ describe("SelectField", () => {
 
     expect((screen.getByRole("combobox") as HTMLSelectElement).disabled).toBe(
       true,
+    );
+  });
+
+  it("shows the badge and links it to the select", () => {
+    render(
+      <SelectField
+        id="kind"
+        label="Typ"
+        value="a"
+        onChange={vi.fn()}
+        badge={<span id="kind-badge">Moduł AI: 94% trafności</span>}
+        badgeId="kind-badge"
+      >
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    expect(screen.getByRole("combobox").getAttribute("aria-describedby")).toBe(
+      "kind-badge",
+    );
+    expect(screen.getByText("Moduł AI: 94% trafności")).toBeTruthy();
+  });
+
+  it("joins the error id and the badge id", () => {
+    render(
+      <SelectField
+        id="kind"
+        label="Typ"
+        value="a"
+        onChange={vi.fn()}
+        error="Wybierz kategorię."
+        badge={<span id="kind-badge">Moduł AI</span>}
+        badgeId="kind-badge"
+      >
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    expect(screen.getByRole("combobox").getAttribute("aria-describedby")).toBe(
+      `${screen.getByRole("alert").id} kind-badge`,
+    );
+  });
+
+  it("makes room for the badge only while there is one", () => {
+    const { rerender } = render(
+      <SelectField
+        id="kind"
+        label="Typ"
+        value="a"
+        onChange={vi.fn()}
+        badge={<span id="kind-badge">Moduł AI</span>}
+        badgeId="kind-badge"
+      >
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    expect(screen.getByRole("combobox").className).toContain("sm:pr-56");
+
+    rerender(
+      <SelectField
+        id="kind"
+        label="Typ"
+        value="a"
+        onChange={vi.fn()}
+        badge={null}
+        badgeId="kind-badge"
+      >
+        <option value="a">Alfa</option>
+      </SelectField>,
+    );
+
+    expect(screen.getByRole("combobox").className).not.toContain("sm:pr-56");
+    expect(screen.getByRole("combobox").getAttribute("aria-describedby")).toBe(
+      null,
     );
   });
 });
