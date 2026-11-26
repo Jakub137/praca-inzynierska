@@ -7,39 +7,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MonthlyBalanceChart } from "@/components/analytics/MonthlyBalanceChart";
+import { stubChartEnvironment } from "@/test-utils/chartEnvironment";
 import { TEST_BALANCE } from "@/test-utils/monthlyBalance";
-
-// jsdom has no layout and no ResizeObserver: this stub reports one fixed size of the chart box.
-class FixedSizeResizeObserver implements ResizeObserver {
-  private readonly callback: ResizeObserverCallback;
-
-  constructor(callback: ResizeObserverCallback) {
-    this.callback = callback;
-  }
-
-  observe(target: Element): void {
-    const entry = { target, contentRect: { width: 600, height: 288 } };
-    this.callback([entry as unknown as ResizeObserverEntry], this);
-  }
-
-  unobserve(): void {}
-
-  disconnect(): void {}
-}
-
-// "auto" animation in Recharts follows prefers-reduced-motion; reporting it turns the animation off, so the bars are drawn at once.
-function reducedMotionQuery(query: string): MediaQueryList {
-  return {
-    matches: query.includes("prefers-reduced-motion"),
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  };
-}
 
 function renderChart() {
   return render(<MonthlyBalanceChart rows={TEST_BALANCE} />);
@@ -57,8 +26,7 @@ function tooltipText(): string {
 
 describe("MonthlyBalanceChart", () => {
   beforeEach(() => {
-    vi.stubGlobal("ResizeObserver", FixedSizeResizeObserver);
-    vi.stubGlobal("matchMedia", reducedMotionQuery);
+    stubChartEnvironment();
   });
 
   afterEach(() => {

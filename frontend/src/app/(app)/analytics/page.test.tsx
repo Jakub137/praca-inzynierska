@@ -10,6 +10,13 @@ vi.mock("@/hooks/useMonthlyBalance", () => ({
   useMonthlyBalance: () => ({ state: { status: "loading" }, retry: vi.fn() }),
 }));
 
+vi.mock("@/hooks/useCategoryDistribution", () => ({
+  useCategoryDistribution: () => ({
+    state: { status: "loading" },
+    retry: vi.fn(),
+  }),
+}));
+
 async function renderPage(
   searchParams: Record<string, string | string[] | undefined> = {},
 ) {
