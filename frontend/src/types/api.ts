@@ -279,3 +279,22 @@ export type MonthlyBalanceResponse = {
   readonly income: number;
   readonly expenses: number;
 };
+
+// One category of GET /api/v1/analytics/category-distribution.
+export type CategoryShareResponse = {
+  readonly categoryId: number;
+  readonly categoryName: string;
+  // Display only: amounts are BigDecimal in the backend, never summed here.
+  readonly amount: number;
+  // Already rounded to two decimal places; the shares need not add up to 100.
+  readonly percentage: number;
+};
+
+export type CategoryDistributionResponse = {
+  // "RRRR-MM-DD", both inclusive.
+  readonly dateFrom: string;
+  readonly dateTo: string;
+  readonly totalExpenses: number;
+  // From the biggest amount; empty when the period has no expenses.
+  readonly categories: readonly CategoryShareResponse[];
+};

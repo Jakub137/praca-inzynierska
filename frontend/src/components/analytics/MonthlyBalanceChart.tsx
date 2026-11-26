@@ -3,13 +3,13 @@ import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import {
   BalanceLegend,
   EXPENSE_LABEL,
-  ExpensePattern,
-  INCOME_FILL,
+  EXPENSE_MARK,
   INCOME_LABEL,
-  patternFill,
+  INCOME_MARK,
 } from "@/components/analytics/balanceSeries";
 import { BalanceTable } from "@/components/analytics/BalanceTable";
 import { BalanceTooltip } from "@/components/analytics/BalanceTooltip";
+import { MarkPatternDef, markFill } from "@/components/analytics/chartMarks";
 import {
   buildChartLabel,
   formatAxisAmount,
@@ -44,7 +44,7 @@ export function MonthlyBalanceChart({ rows }: MonthlyBalanceChartProps) {
           aria-label={buildChartLabel(rows)}
         >
           <defs>
-            <ExpensePattern id={patternId} />
+            <MarkPatternDef id={patternId} mark={EXPENSE_MARK} />
           </defs>
           <CartesianGrid vertical={false} stroke="var(--color-line)" />
           <XAxis
@@ -63,11 +63,11 @@ export function MonthlyBalanceChart({ rows }: MonthlyBalanceChartProps) {
               <BalanceTooltip active={active} month={label} rows={rows} />
             )}
           />
-          <Bar dataKey="income" name={INCOME_LABEL} fill={INCOME_FILL} />
+          <Bar dataKey="income" name={INCOME_LABEL} fill={INCOME_MARK.color} />
           <Bar
             dataKey="expenses"
             name={EXPENSE_LABEL}
-            fill={patternFill(patternId)}
+            fill={markFill(EXPENSE_MARK, patternId)}
           />
         </BarChart>
       </div>

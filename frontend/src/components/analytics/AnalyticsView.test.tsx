@@ -5,6 +5,7 @@ import type { AnalyticsMonths } from "@/lib/analytics/period";
 
 const pushMock = vi.hoisted(() => vi.fn());
 const useMonthlyBalanceMock = vi.hoisted(() => vi.fn());
+const useCategoryDistributionMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
@@ -13,6 +14,13 @@ vi.mock("next/navigation", () => ({
 // The balance card loads its own data; here it only has to stay in the loading state.
 vi.mock("@/hooks/useMonthlyBalance", () => ({
   useMonthlyBalance: useMonthlyBalanceMock.mockReturnValue({
+    state: { status: "loading" },
+    retry: vi.fn(),
+  }),
+}));
+
+vi.mock("@/hooks/useCategoryDistribution", () => ({
+  useCategoryDistribution: useCategoryDistributionMock.mockReturnValue({
     state: { status: "loading" },
     retry: vi.fn(),
   }),
@@ -103,11 +111,9 @@ describe("AnalyticsView chart cards", () => {
     expect(useMonthlyBalanceMock).toHaveBeenLastCalledWith(12);
   });
 
-  it("tells the distribution card the chosen number of months", () => {
+  it("asks for the category distribution of the chosen period", () => {
     renderView(12);
 
-    expect(
-      screen.getByText("Wykres w przygotowaniu. Liczba miesięcy: 12."),
-    ).toBeTruthy();
+    expect(useCategoryDistributionMock).toHaveBeenLastCalledWith(12);
   });
 });

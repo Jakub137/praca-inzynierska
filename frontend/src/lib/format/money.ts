@@ -24,6 +24,14 @@ const CHANGE_FORMAT = new Intl.NumberFormat("pl-PL", {
   maximumFractionDigits: 1,
 });
 
+// "unit" for the same reason as above; two places show the share exactly as the API sends it.
+const SHARE_FORMAT = new Intl.NumberFormat("pl-PL", {
+  style: "unit",
+  unit: "percent",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 const SIGNS: Record<TransactionType, string> = {
   INCOME: "+",
   EXPENSE: "-",
@@ -39,6 +47,10 @@ export function formatPln(value: number): string {
 
 export function formatPercent(value: number): string {
   return PERCENT_FORMAT.format(value);
+}
+
+export function formatShare(value: number): string {
+  return SHARE_FORMAT.format(value);
 }
 
 // The sign is written by hand, like in formatSignedPln: zero has none ("0,0%", never "+0,0%").
