@@ -4,9 +4,18 @@ import { AnalyticsView } from "@/components/analytics/AnalyticsView";
 import type { AnalyticsMonths } from "@/lib/analytics/period";
 
 const pushMock = vi.hoisted(() => vi.fn());
+const useMonthlyBalanceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
+}));
+
+// The balance card loads its own data; here it only has to stay in the loading state.
+vi.mock("@/hooks/useMonthlyBalance", () => ({
+  useMonthlyBalance: useMonthlyBalanceMock.mockReturnValue({
+    state: { status: "loading" },
+    retry: vi.fn(),
+  }),
 }));
 
 function periodSelect(): HTMLSelectElement {
@@ -88,11 +97,17 @@ describe("AnalyticsView chart cards", () => {
     ).toBeTruthy();
   });
 
-  it("tells both cards the chosen number of months", () => {
+  it("asks for the monthly balance of the chosen period", () => {
+    renderView(12);
+
+    expect(useMonthlyBalanceMock).toHaveBeenLastCalledWith(12);
+  });
+
+  it("tells the distribution card the chosen number of months", () => {
     renderView(12);
 
     expect(
-      screen.getAllByText("Wykres w przygotowaniu. Liczba miesięcy: 12."),
-    ).toHaveLength(2);
+      screen.getByText("Wykres w przygotowaniu. Liczba miesięcy: 12."),
+    ).toBeTruthy();
   });
 });
