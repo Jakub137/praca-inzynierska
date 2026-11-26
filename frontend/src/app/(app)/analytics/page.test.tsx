@@ -6,6 +6,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+vi.mock("@/hooks/useMonthlyBalance", () => ({
+  useMonthlyBalance: () => ({ state: { status: "loading" }, retry: vi.fn() }),
+}));
+
 async function renderPage(
   searchParams: Record<string, string | string[] | undefined> = {},
 ) {

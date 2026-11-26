@@ -270,3 +270,12 @@ export type DashboardSummaryResponse = {
   // Sum of the limits of this month; null when none is set ("no limit" is not "0").
   readonly monthLimitTotal: number | null;
 };
+
+// One position of GET /api/v1/analytics/monthly-balance (MonthlyBalanceResponse).
+export type MonthlyBalanceResponse = {
+  // "RRRR-MM"; the list is ordered from the oldest month and has no gaps.
+  readonly month: string;
+  // Display only: amounts are BigDecimal in the backend, never summed here.
+  readonly income: number;
+  readonly expenses: number;
+};
